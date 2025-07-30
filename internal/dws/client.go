@@ -31,6 +31,14 @@ type ListResponse struct {
 	Files []FileInfo `json:"files"`
 }
 
+type NestedListResponse struct {
+	Data struct {
+		Result struct {
+			Files []FileInfo `json:"files"`
+		} `json:"result"`
+	} `json:"data"`
+}
+
 type UploadResponse struct {
 	Success bool     `json:"success"`
 	Message string   `json:"message"`
@@ -267,13 +275,24 @@ func (c *Client) ListFiles(path string) ([]FileInfo, error) {
 	// Debug: show what we got
 	fmt.Printf("DEBUG: List API response: %s\n", string(respBody))
 
+	// Try to parse as nested response first
+	var nestedResp NestedListResponse
+	if err := json.Unmarshal(respBody, &nestedResp); err == nil {
+		// Check if this is actually a nested response by seeing if Data has content
+		if len(nestedResp.Data.Result.Files) > 0 {
+			fmt.Printf("DEBUG: Found %d files (nested): %+v\n", len(nestedResp.Data.Result.Files), nestedResp.Data.Result.Files)
+			return nestedResp.Data.Result.Files, nil
+		}
+	}
+
+	// Fall back to direct response format
 	var listResp ListResponse
 	if err := json.Unmarshal(respBody, &listResp); err != nil {
 		return nil, fmt.Errorf("failed to decode response as JSON (got: %s): %w", string(respBody), err)
 	}
 
 	// Debug: show parsed files
-	fmt.Printf("DEBUG: Found %d files: %+v\n", len(listResp.Files), listResp.Files)
+	fmt.Printf("DEBUG: Found %d files (direct): %+v\n", len(listResp.Files), listResp.Files)
 
 	return listResp.Files, nil
 }
@@ -281,13 +300,17 @@ func (c *Client) ListFiles(path string) ([]FileInfo, error) {
 func (c *Client) VerifyFileExists(path string) (bool, error) {
 	dir := filepath.Dir(path)
 	filename := filepath.Base(path)
+	
+	fmt.Printf("DEBUG: Looking for file '%s' in directory '%s'\n", filename, dir)
 
 	files, err := c.ListFiles(dir)
 	if err != nil {
 		return false, err
 	}
 
+	fmt.Printf("DEBUG: Comparing filename '%s' against:\n", filename)
 	for _, file := range files {
+		fmt.Printf("DEBUG:   - '%s' (match: %t)\n", file.Name, strings.EqualFold(file.Name, filename))
 		if strings.EqualFold(file.Name, filename) {
 			return true, nil
 		}

@@ -24,12 +24,24 @@ func Run(args []string) error {
 		return showUsage()
 	}
 
-	if len(args) != 2 {
+	// Parse debug flag
+	debug := false
+	var filteredArgs []string
+	
+	for _, arg := range args {
+		if arg == "-debug" || arg == "-d" {
+			debug = true
+		} else {
+			filteredArgs = append(filteredArgs, arg)
+		}
+	}
+
+	if len(filteredArgs) != 2 {
 		return fmt.Errorf("invalid number of arguments")
 	}
 
-	source := args[0]
-	destination := args[1]
+	source := filteredArgs[0]
+	destination := filteredArgs[1]
 
 	if !strings.Contains(destination, ":") {
 		return fmt.Errorf("destination must be in format host:path")
@@ -57,7 +69,7 @@ func Run(args []string) error {
 		return fmt.Errorf("failed to get password: %w", err)
 	}
 
-	client := dws.NewClient(host, password)
+	client := dws.NewClient(host, password, debug)
 
 	// If remotePath ends with '/', it's a directory - append source filename
 	var targetPath string
