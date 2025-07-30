@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewClient(t *testing.T) {
-	client := NewClient("localhost", "password123")
+	client := NewClient("localhost", "password123", false)
 	
 	if client.host != "localhost" {
 		t.Errorf("Expected host 'localhost', got '%s'", client.host)
@@ -61,6 +61,7 @@ func TestUploadFile(t *testing.T) {
 		host:     server.URL[7:], // Remove http://
 		password: "testpass",
 		client:   server.Client(),
+		debug:    false,
 	}
 	
 	err = client.UploadFile(tempFile.Name(), "/storage/sd/test.txt")
@@ -89,6 +90,7 @@ func TestUploadFileError(t *testing.T) {
 		host:     server.URL[7:],
 		password: "testpass",
 		client:   server.Client(),
+		debug:    false,
 	}
 	
 	err = client.UploadFile(tempFile.Name(), "/storage/sd/test.txt")
@@ -122,6 +124,7 @@ func TestListFiles(t *testing.T) {
 		host:     server.URL[7:],
 		password: "testpass",
 		client:   server.Client(),
+		debug:    false,
 	}
 	
 	files, err := client.ListFiles("/storage/sd")
@@ -140,6 +143,26 @@ func TestListFiles(t *testing.T) {
 	}
 }
 
+func TestNewClientWithDebug(t *testing.T) {
+	client := NewClient("localhost", "password123", true)
+	
+	if client.host != "localhost" {
+		t.Errorf("Expected host 'localhost', got '%s'", client.host)
+	}
+	
+	if client.password != "password123" {
+		t.Errorf("Expected password 'password123', got '%s'", client.password)
+	}
+	
+	if !client.debug {
+		t.Error("Expected debug mode to be enabled")
+	}
+	
+	if client.client == nil {
+		t.Error("Expected HTTP client to be initialized")
+	}
+}
+
 func TestVerifyFileExists(t *testing.T) {
 	files := []FileInfo{
 		{Name: "existing.txt", Path: "/storage/sd/existing.txt", Size: 1024},
@@ -155,6 +178,7 @@ func TestVerifyFileExists(t *testing.T) {
 		host:     server.URL[7:],
 		password: "testpass",
 		client:   server.Client(),
+		debug:    false,
 	}
 	
 	exists, err := client.VerifyFileExists("/storage/sd/existing.txt")

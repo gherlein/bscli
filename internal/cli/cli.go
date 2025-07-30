@@ -107,11 +107,14 @@ func Run(args []string) error {
 }
 
 func showUsage() error {
-	fmt.Printf("Usage: bscp <source> <host:destination>\n")
+	fmt.Printf("Usage: bscp [-debug|-d] <source> <host:destination>\n")
 	fmt.Printf("\nCopy files to BrightSign player using DWS API\n")
+	fmt.Printf("\nOptions:\n")
+	fmt.Printf("  -debug, -d    Enable debug output\n")
 	fmt.Printf("\nExamples:\n")
 	fmt.Printf("  bscp file.txt 192.168.1.100:/my/file.txt\n")
-	fmt.Printf("  bscp video.mp4 player.local:/videos/video.mp4\n")
+	fmt.Printf("  bscp -debug video.mp4 player.local:/videos/video.mp4\n")
+	fmt.Printf("  bscp -d video.mp4 player.local:/videos/video.mp4\n")
 	fmt.Printf("\nFiles are always copied to the SD card (/storage/sd) on the player.\n")
 	return nil
 }

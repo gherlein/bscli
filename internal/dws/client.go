@@ -19,6 +19,7 @@ type Client struct {
 	host     string
 	password string
 	client   *http.Client
+	debug    bool
 }
 
 type FileInfo struct {
@@ -51,13 +52,21 @@ type NestedUploadResponse struct {
 	} `json:"data"`
 }
 
-func NewClient(host, password string) *Client {
+func NewClient(host, password string, debug bool) *Client {
 	return &Client{
 		host:     host,
 		password: password,
+		debug:    debug,
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
+	}
+}
+
+// debugf prints debug messages only if debug mode is enabled
+func (c *Client) debugf(format string, args ...interface{}) {
+	if c.debug {
+		fmt.Printf("DEBUG: "+format, args...)
 	}
 }
 
@@ -273,14 +282,14 @@ func (c *Client) ListFiles(path string) ([]FileInfo, error) {
 	}
 
 	// Debug: show what we got
-	fmt.Printf("DEBUG: List API response: %s\n", string(respBody))
+	c.debugf("List API response: %s\n", string(respBody))
 
 	// Try to parse as nested response first
 	var nestedResp NestedListResponse
 	if err := json.Unmarshal(respBody, &nestedResp); err == nil {
 		// Check if this is actually a nested response by seeing if Data has content
 		if len(nestedResp.Data.Result.Files) > 0 {
-			fmt.Printf("DEBUG: Found %d files (nested): %+v\n", len(nestedResp.Data.Result.Files), nestedResp.Data.Result.Files)
+			c.debugf("Found %d files (nested): %+v\n", len(nestedResp.Data.Result.Files), nestedResp.Data.Result.Files)
 			return nestedResp.Data.Result.Files, nil
 		}
 	}
@@ -292,7 +301,7 @@ func (c *Client) ListFiles(path string) ([]FileInfo, error) {
 	}
 
 	// Debug: show parsed files
-	fmt.Printf("DEBUG: Found %d files (direct): %+v\n", len(listResp.Files), listResp.Files)
+	c.debugf("Found %d files (direct): %+v\n", len(listResp.Files), listResp.Files)
 
 	return listResp.Files, nil
 }
@@ -301,16 +310,16 @@ func (c *Client) VerifyFileExists(path string) (bool, error) {
 	dir := filepath.Dir(path)
 	filename := filepath.Base(path)
 	
-	fmt.Printf("DEBUG: Looking for file '%s' in directory '%s'\n", filename, dir)
+	c.debugf("Looking for file '%s' in directory '%s'\n", filename, dir)
 
 	files, err := c.ListFiles(dir)
 	if err != nil {
 		return false, err
 	}
 
-	fmt.Printf("DEBUG: Comparing filename '%s' against:\n", filename)
+	c.debugf("Comparing filename '%s' against:\n", filename)
 	for _, file := range files {
-		fmt.Printf("DEBUG:   - '%s' (match: %t)\n", file.Name, strings.EqualFold(file.Name, filename))
+		c.debugf("  - '%s' (match: %t)\n", file.Name, strings.EqualFold(file.Name, filename))
 		if strings.EqualFold(file.Name, filename) {
 			return true, nil
 		}

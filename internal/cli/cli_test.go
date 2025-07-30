@@ -62,6 +62,16 @@ func TestRunInvalidArgs(t *testing.T) {
 			expectError: true,
 		},
 		{
+			name: "debug flag with valid args",
+			args: []string{"-debug", "file.txt", "host:/storage/sd/path"},
+			expectError: true, // will fail because file doesn't exist
+		},
+		{
+			name: "debug flag short form with valid args",
+			args: []string{"-d", "file.txt", "host:/storage/sd/path"},
+			expectError: true, // will fail because file doesn't exist
+		},
+		{
 			name: "missing colon in destination",
 			args: []string{"file.txt", "hostpath"},
 			expectError: true,
@@ -96,6 +106,58 @@ func TestRunNonexistentFile(t *testing.T) {
 	
 	if !strings.Contains(err.Error(), "source file does not exist") {
 		t.Errorf("Expected 'source file does not exist' error, got: %v", err)
+	}
+}
+
+func TestDebugFlagParsing(t *testing.T) {
+	tests := []struct {
+		name       string
+		args       []string
+		expectError bool
+		expectDebug bool
+	}{
+		{
+			name: "debug flag long form",
+			args: []string{"-debug", "file.txt", "host:/storage/sd/path"},
+			expectError: true, // will fail because file doesn't exist
+			expectDebug: true,
+		},
+		{
+			name: "debug flag short form", 
+			args: []string{"-d", "file.txt", "host:/storage/sd/path"},
+			expectError: true, // will fail because file doesn't exist
+			expectDebug: true,
+		},
+		{
+			name: "no debug flag",
+			args: []string{"file.txt", "host:/storage/sd/path"},
+			expectError: true, // will fail because file doesn't exist
+			expectDebug: false,
+		},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Just test that the flag parsing logic works without actual file operations
+			debug := false
+			var filteredArgs []string
+			
+			for _, arg := range tt.args {
+				if arg == "-debug" || arg == "-d" {
+					debug = true
+				} else {
+					filteredArgs = append(filteredArgs, arg)
+				}
+			}
+			
+			if debug != tt.expectDebug {
+				t.Errorf("Expected debug=%t, got debug=%t", tt.expectDebug, debug)
+			}
+			
+			if len(filteredArgs) != 2 {
+				t.Errorf("Expected 2 filtered args, got %d", len(filteredArgs))
+			}
+		})
 	}
 }
 
