@@ -14,7 +14,6 @@ A command-line tool for copying files to BrightSign players using the Diagnostic
 - **Upload verification**: Automatically verifies that uploaded files exist on the destination
 - **Cross-platform**: Works on Linux, macOS, and Windows
 - **IPv4 and hostname support**: Connect using IP addresses or hostnames
-- **Port support**: Handle custom ports (e.g., `host:8080:/path`)
 
 ## Usage
 
@@ -36,14 +35,9 @@ Upload a file to a specific location:
 bscp video.mp4 192.168.1.100:/storage/sd/content/video.mp4
 ```
 
-Upload a configuration file:
+Upload an autorun :
 ```bash
 bscp autorun.brs 10.0.1.50:/storage/sd/autorun.brs
-```
-
-Upload to a player with custom port:
-```bash
-bscp image.jpg player:8080:/storage/sd/images/background.jpg
 ```
 
 Upload using relative paths (automatically prefixed with `/storage/sd/`):
@@ -63,7 +57,7 @@ The tool will prompt for the DWS password when connecting to the player:
 Password for player.local:
 ```
 
-Enter the password configured in the player's DWS settings (typically found in the BrightSign Network settings or local web interface).
+Enter the password configured in the player's DWS settings.
 
 ### Path Rules
 
@@ -132,19 +126,6 @@ make install
 
 # Uninstall from /usr/local/bin (requires sudo)
 make uninstall
-```
-
-#### Using Go directly
-
-```bash
-# Build binary
-go build -o bscp .
-
-# Run tests
-go test ./...
-
-# Build with optimizations (smaller binary)
-CGO_ENABLED=0 go build -ldflags "-s -w" -o bscp .
 ```
 
 ### Cross-compilation
@@ -256,4 +237,4 @@ go test ./internal/dws
 
 ## License
 
-This project follows Go best practices and includes comprehensive unit tests for all functionality.
+Apache 2.0.  See LICENSE.txt
