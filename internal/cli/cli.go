@@ -56,8 +56,9 @@ func Run(args []string) error {
 	host := destination[:lastColon]
 	remotePath := destination[lastColon+1:]
 
+	// If path doesn't start with /, assume it's relative to /storage/sd
 	if !strings.HasPrefix(remotePath, "/") {
-		return fmt.Errorf("remote path must be absolute")
+		remotePath = "/storage/sd/" + remotePath
 	}
 
 	if !fileExists(source) {

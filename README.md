@@ -46,6 +46,15 @@ Upload to a player with custom port:
 bscp image.jpg player:8080:/storage/sd/images/background.jpg
 ```
 
+Upload using relative paths (automatically prefixed with `/storage/sd/`):
+```bash
+bscp config.json player.local:config.json
+# Equivalent to: bscp config.json player.local:/storage/sd/config.json
+
+bscp video.mp4 192.168.1.100:content/videos/
+# Equivalent to: bscp video.mp4 192.168.1.100:/storage/sd/content/videos/
+```
+
 ### Authentication
 
 The tool will prompt for the DWS password when connecting to the player:
@@ -58,7 +67,8 @@ Enter the password configured in the player's DWS settings (typically found in t
 
 ### Path Rules
 
-- **Destination paths must be absolute** (start with `/`)
+- **Absolute paths** (starting with `/`) are used as-is
+- **Relative paths** (not starting with `/`) are automatically prefixed with `/storage/sd/`
 - **All files are stored under `/storage/sd`** on the player
 - **Directory destinations** (ending with `/`) will use the source filename
 - **File destinations** will use the specified filename

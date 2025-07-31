@@ -77,9 +77,9 @@ func TestRunInvalidArgs(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name: "relative remote path",
+			name: "relative remote path", 
 			args: []string{"file.txt", "host:relative/path"},
-			expectError: true,
+			expectError: true, // Still expect error due to nonexistent file.txt
 		},
 	}
 	
@@ -182,7 +182,9 @@ func TestDestinationParsing(t *testing.T) {
 		},
 		{
 			destination: "host:relative/path",
-			expectError: true,
+			expectError: false,
+			expectedHost: "host", 
+			expectedPath: "relative/path", // Raw parsing, conversion happens later
 		},
 		{
 			destination: "no-colon-here",
@@ -218,6 +220,50 @@ func TestDestinationParsing(t *testing.T) {
 			
 			if tt.expectError && strings.HasPrefix(remotePath, "/") {
 				t.Error("Expected error for relative path")
+			}
+		})
+	}
+}
+
+func TestRelativePathConversion(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "absolute path unchanged",
+			input:    "/storage/sd/file.txt",
+			expected: "/storage/sd/file.txt",
+		},
+		{
+			name:     "relative path converted",
+			input:    "file.txt",
+			expected: "/storage/sd/file.txt",
+		},
+		{
+			name:     "relative path with subdirs converted",
+			input:    "folder/file.txt",
+			expected: "/storage/sd/folder/file.txt",
+		},
+		{
+			name:     "empty path converted",
+			input:    "",
+			expected: "/storage/sd/",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			remotePath := tt.input
+			
+			// Apply the same logic as in the CLI
+			if !strings.HasPrefix(remotePath, "/") {
+				remotePath = "/storage/sd/" + remotePath
+			}
+			
+			if remotePath != tt.expected {
+				t.Errorf("Expected '%s', got '%s'", tt.expected, remotePath)
 			}
 		})
 	}
