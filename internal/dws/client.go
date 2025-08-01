@@ -71,22 +71,25 @@ func (c *Client) debugf(format string, args ...interface{}) {
 }
 
 func (c *Client) UploadFile(localPath, remotePath string) error {
-	// Use PUT method with the storage path directly in URL
 	// Extract storage device (e.g., "sd") from path like "/storage/sd/file.txt"
 	pathParts := strings.Split(strings.Trim(remotePath, "/"), "/")
 	if len(pathParts) < 2 || pathParts[0] != "storage" {
 		return fmt.Errorf("invalid remote path format, expected /storage/{device}/...")
 	}
 	
+	// Only allow root level files to prevent directory creation
+	if len(pathParts) != 3 {
+		return fmt.Errorf("only root level files are supported (no subdirectories), got: %s", remotePath)
+	}
+	
 	storageDevice := pathParts[1]
 	url := fmt.Sprintf("http://%s/api/v1/files/%s/", c.host, storageDevice)
 	
-	// Get the target filename from the remote path
-	targetFilename := filepath.Base(remotePath)
-	if len(pathParts) > 2 {
-		// If there are subdirectories in the path, use the full relative path
-		targetFilename = strings.Join(pathParts[2:], "/")
-	}
+	// Use only the filename - no paths that could trigger directory creation
+	targetFilename := pathParts[2]
+	
+	c.debugf("Upload URL: %s", url)
+	c.debugf("Target filename in form: %s", targetFilename)
 
 	// Create a function that builds the multipart body and returns bytes
 	createBodyBytes := func() ([]byte, string, error) {

@@ -84,6 +84,12 @@ func Run(args []string) error {
 	if !strings.HasPrefix(targetPath, sdCardPath) {
 		return fmt.Errorf("remote path must be under %s, got: %s", sdCardPath, targetPath)
 	}
+	
+	// Check if target path tries to create subdirectories (only allow root level files)
+	pathParts := strings.Split(strings.Trim(targetPath, "/"), "/")
+	if len(pathParts) > 3 {
+		return fmt.Errorf("subdirectories not supported to prevent directory creation, use only /storage/sd/filename")
+	}
 
 	fmt.Printf("Uploading %s to %s:%s...\n", source, host, targetPath)
 
@@ -113,10 +119,11 @@ func showUsage() error {
 	fmt.Printf("\nOptions:\n")
 	fmt.Printf("  -debug, -d    Enable debug output\n")
 	fmt.Printf("\nExamples:\n")
-	fmt.Printf("  bscp file.txt 192.168.1.100:/my/file.txt\n")
-	fmt.Printf("  bscp -debug video.mp4 player.local:/videos/video.mp4\n")
-	fmt.Printf("  bscp -d video.mp4 player.local:/videos/video.mp4\n")
-	fmt.Printf("\nFiles are always copied to the SD card (/storage/sd) on the player.\n")
+	fmt.Printf("  bscp file.txt 192.168.1.100:/storage/sd/file.txt\n")
+	fmt.Printf("  bscp -debug video.mp4 player.local:/storage/sd/video.mp4\n")
+	fmt.Printf("  bscp -d video.mp4 player.local:/storage/sd/\n")
+	fmt.Printf("\nFiles are copied to the root of the SD card (/storage/sd/) only.\n")
+	fmt.Printf("Subdirectories are not supported to prevent directory creation errors.\n")
 	return nil
 }
 
