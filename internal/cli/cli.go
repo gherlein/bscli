@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"syscall"
@@ -16,6 +17,7 @@ var (
 	username string
 	password string
 	debug    bool
+	jsonOutput bool
 
 	// Root command
 	rootCmd = &cobra.Command{
@@ -68,6 +70,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&username, "user", "u", "admin", "Username for authentication")
 	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Password for authentication")
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "Enable debug output")
+	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output raw JSON (for scripts)")
 
 	// Add command groups
 	addInfoCommands()
@@ -109,6 +112,19 @@ func getClient() (*brightsign.Client, error) {
 
 // handleError prints an error message and exits
 func handleError(err error) {
-	fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	if !jsonOutput {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	} else {
+		// For JSON mode, output error as JSON to stderr
+		errorObj := map[string]string{"error": err.Error()}
+		json.NewEncoder(os.Stderr).Encode(errorObj)
+	}
 	os.Exit(1)
+}
+
+// outputJSON outputs data as JSON when --json flag is used
+func outputJSON(data interface{}) {
+	if err := json.NewEncoder(os.Stdout).Encode(data); err != nil {
+		handleError(fmt.Errorf("failed to encode JSON: %w", err))
+	}
 }

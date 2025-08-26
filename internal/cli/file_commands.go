@@ -43,6 +43,11 @@ func addFileCommands() {
 				handleError(err)
 			}
 
+			if jsonOutput {
+				outputJSON(files)
+				return
+			}
+
 			if len(files) == 0 {
 				fmt.Println("No files found")
 				return
@@ -91,13 +96,25 @@ func addFileCommands() {
 				handleError(fmt.Errorf("local file not found: %s", localPath))
 			}
 
-			fmt.Printf("Uploading %s to %s...\n", localPath, remotePath)
+			if !jsonOutput {
+				fmt.Printf("Uploading %s to %s...\n", localPath, remotePath)
+			}
+			
 			err = client.Storage.UploadFile(localPath, remotePath)
 			if err != nil {
 				handleError(err)
 			}
 
-			fmt.Println("Upload complete")
+			if jsonOutput {
+				outputJSON(map[string]interface{}{
+					"success": true,
+					"action":  "upload",
+					"source":  localPath,
+					"destination": remotePath,
+				})
+			} else {
+				fmt.Println("Upload complete")
+			}
 		},
 	}
 
@@ -121,13 +138,25 @@ func addFileCommands() {
 				remotePath = "/storage/sd/" + remotePath
 			}
 
-			fmt.Printf("Downloading %s to %s...\n", remotePath, localPath)
+			if !jsonOutput {
+				fmt.Printf("Downloading %s to %s...\n", remotePath, localPath)
+			}
+			
 			err = client.Storage.DownloadFile(remotePath, localPath)
 			if err != nil {
 				handleError(err)
 			}
 
-			fmt.Println("Download complete")
+			if jsonOutput {
+				outputJSON(map[string]interface{}{
+					"success": true,
+					"action":  "download",
+					"source":  remotePath,
+					"destination": localPath,
+				})
+			} else {
+				fmt.Println("Download complete")
+			}
 		},
 	}
 

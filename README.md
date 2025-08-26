@@ -87,6 +87,21 @@ Enable debug output to see HTTP requests:
 bscli 192.168.1.100 -d info device
 ```
 
+### JSON Output
+
+For scripting and automation, use the `--json` flag to get raw JSON output:
+
+```bash
+# Human-readable output (default)
+bscli 192.168.1.100 info device
+
+# JSON output for scripts
+bscli 192.168.1.100 --json info device
+
+# Parse with jq
+bscli 192.168.1.100 --json info device | jq '.serial'
+```
+
 ## Go Library Usage
 
 The `pkg/brightsign` package provides a clean Go API:

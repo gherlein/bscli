@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"bscli/pkg/brightsign"
@@ -30,8 +29,34 @@ func addInfoCommands() {
 				handleError(err)
 			}
 
-			data, _ := json.MarshalIndent(info, "", "  ")
-			fmt.Println(string(data))
+			if jsonOutput {
+				outputJSON(info)
+			} else {
+				fmt.Printf("Model: %s\n", info.Model)
+				fmt.Printf("Serial: %s\n", info.Serial)
+				fmt.Printf("Family: %s\n", info.Family)
+				fmt.Printf("Boot Version: %s\n", info.BootVersion)
+				fmt.Printf("Firmware Version: %s\n", info.FWVersion)
+				fmt.Printf("Uptime: %s (%d seconds)\n", info.Uptime, info.UptimeSeconds)
+				
+				if len(info.Network.Interfaces) > 0 {
+					fmt.Printf("\nNetwork Interfaces:\n")
+					for _, iface := range info.Network.Interfaces {
+						fmt.Printf("  %s (%s): %s\n", iface.Name, iface.Type, iface.IP)
+					}
+				}
+				
+				if info.Network.Hostname != "" {
+					fmt.Printf("Hostname: %s\n", info.Network.Hostname)
+				}
+				
+				if len(info.Extensions) > 0 {
+					fmt.Printf("\nExtensions:\n")
+					for key, value := range info.Extensions {
+						fmt.Printf("  %s: %s\n", key, value)
+					}
+				}
+			}
 		},
 	}
 
@@ -50,8 +75,12 @@ func addInfoCommands() {
 				handleError(err)
 			}
 
-			fmt.Printf("Status: %s\n", health.Status)
-			fmt.Printf("Status Time: %s\n", health.StatusTime)
+			if jsonOutput {
+				outputJSON(health)
+			} else {
+				fmt.Printf("Status: %s\n", health.Status)
+				fmt.Printf("Status Time: %s\n", health.StatusTime.Format("2006-01-02 15:04:05"))
+			}
 		},
 	}
 
@@ -65,15 +94,19 @@ func addInfoCommands() {
 				handleError(err)
 			}
 
-			time, err := client.Info.GetTime()
+			timeInfo, err := client.Info.GetTime()
 			if err != nil {
 				handleError(err)
 			}
 
-			fmt.Printf("Date: %s\n", time.Date)
-			fmt.Printf("Time: %s\n", time.Time)
-			if time.Timezone != "" {
-				fmt.Printf("Timezone: %s\n", time.Timezone)
+			if jsonOutput {
+				outputJSON(timeInfo)
+			} else {
+				fmt.Printf("Date: %s\n", timeInfo.Date)
+				fmt.Printf("Time: %s\n", timeInfo.Time)
+				if timeInfo.Timezone != "" {
+					fmt.Printf("Timezone: %s\n", timeInfo.Timezone)
+				}
 			}
 		},
 	}
@@ -100,7 +133,11 @@ func addInfoCommands() {
 				handleError(err)
 			}
 
-			fmt.Println("Time set successfully")
+			if jsonOutput {
+				outputJSON(map[string]bool{"success": true})
+			} else {
+				fmt.Println("Time set successfully")
+			}
 		},
 	}
 	setTimeCmd.Flags().String("timezone", "", "Timezone to apply")
@@ -120,12 +157,16 @@ func addInfoCommands() {
 				handleError(err)
 			}
 
-			fmt.Printf("Resolution: %s\n", mode.Resolution)
-			fmt.Printf("Frame Rate: %d\n", mode.FrameRate)
-			fmt.Printf("Scan Method: %s\n", mode.ScanMethod)
-			fmt.Printf("Preferred Mode: %v\n", mode.PreferredMode)
-			if mode.OverscanMode != "" {
-				fmt.Printf("Overscan Mode: %s\n", mode.OverscanMode)
+			if jsonOutput {
+				outputJSON(mode)
+			} else {
+				fmt.Printf("Resolution: %s\n", mode.Resolution)
+				fmt.Printf("Frame Rate: %d Hz\n", mode.FrameRate)
+				fmt.Printf("Scan Method: %s\n", mode.ScanMethod)
+				fmt.Printf("Preferred Mode: %v\n", mode.PreferredMode)
+				if mode.OverscanMode != "" {
+					fmt.Printf("Overscan Mode: %s\n", mode.OverscanMode)
+				}
 			}
 		},
 	}
@@ -145,9 +186,13 @@ func addInfoCommands() {
 				handleError(err)
 			}
 
-			fmt.Println("Available APIs:")
-			for _, api := range apis {
-				fmt.Printf("  - %s\n", api)
+			if jsonOutput {
+				outputJSON(apis)
+			} else {
+				fmt.Println("Available APIs:")
+				for _, api := range apis {
+					fmt.Printf("  - %s\n", api)
+				}
 			}
 		},
 	}
