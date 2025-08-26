@@ -50,10 +50,19 @@ func addInfoCommands() {
 					fmt.Printf("Hostname: %s\n", info.Network.Hostname)
 				}
 				
-				if len(info.Extensions) > 0 {
+				if info.Extensions != nil {
 					fmt.Printf("\nExtensions:\n")
-					for key, value := range info.Extensions {
-						fmt.Printf("  %s: %s\n", key, value)
+					switch ext := info.Extensions.(type) {
+					case map[string]interface{}:
+						for key, value := range ext {
+							fmt.Printf("  %s: %v\n", key, value)
+						}
+					case map[string]string:
+						for key, value := range ext {
+							fmt.Printf("  %s: %s\n", key, value)
+						}
+					default:
+						fmt.Printf("  %v\n", ext)
 					}
 				}
 			}

@@ -2,6 +2,8 @@ package brightsign
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"time"
 )
 
@@ -20,7 +22,7 @@ type DeviceInfo struct {
 	Network         NetworkInfo       `json:"network"`
 	Uptime          string            `json:"uptime"`
 	UptimeSeconds   int64             `json:"uptimeSeconds"`
-	Extensions      map[string]string `json:"extensions"`
+	Extensions      interface{} `json:"extensions"`
 }
 
 // NetworkInfo represents network information
@@ -78,7 +80,18 @@ func (s *InfoService) GetInfo() (*DeviceInfo, error) {
 	}
 
 	if err := parseJSON(resp, &result); err != nil {
-		return nil, err
+		// For better debugging, show what we got
+		if s.client.debug {
+			resp.Body.Close()
+			// Re-read the response body for debugging
+			resp2, _ := s.client.doRequest("GET", "/info/", nil)
+			if resp2 != nil {
+				body, _ := io.ReadAll(resp2.Body)
+				fmt.Fprintf(os.Stderr, "DEBUG: Failed to parse GetInfo response: %s\n", string(body))
+				resp2.Body.Close()
+			}
+		}
+		return nil, fmt.Errorf("failed to parse device info response: %w", err)
 	}
 
 	return &result.Data.Result, nil

@@ -10,6 +10,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -113,7 +114,7 @@ func (c *Client) doRequestWithBody(method, url string, body io.Reader, contentTy
 	}
 
 	if c.debug {
-		fmt.Printf("DEBUG: %s %s\n", method, url)
+		fmt.Fprintf(os.Stderr, "DEBUG: %s %s\n", method, url)
 	}
 
 	// First attempt without authentication

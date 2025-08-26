@@ -58,7 +58,7 @@ func (s *StorageService) ListFiles(path string, options *ListOptions) ([]FileInf
 	}
 
 	if s.client.debug {
-		fmt.Printf("DEBUG: ListFiles API response: %s\n", string(bodyBytes))
+		fmt.Fprintf(os.Stderr, "DEBUG: ListFiles API response: %s\n", string(bodyBytes))
 	}
 
 	// Try to parse as array first (directory listing)
@@ -154,7 +154,7 @@ func (s *StorageService) UploadFile(localPath, remotePath string) error {
 	}
 
 	if s.client.debug {
-		fmt.Printf("DEBUG: Uploaded %s (%d bytes) to %s\n", localPath, fileInfo.Size(), remotePath)
+		fmt.Fprintf(os.Stderr, "DEBUG: Uploaded %s (%d bytes) to %s\n", localPath, fileInfo.Size(), remotePath)
 	}
 
 	return nil
@@ -190,7 +190,7 @@ func (s *StorageService) DownloadFile(remotePath, localPath string) error {
 	}
 
 	if s.client.debug {
-		fmt.Printf("DEBUG: Downloaded %s (%d bytes) to %s\n", remotePath, written, localPath)
+		fmt.Fprintf(os.Stderr, "DEBUG: Downloaded %s (%d bytes) to %s\n", remotePath, written, localPath)
 	}
 
 	return nil
