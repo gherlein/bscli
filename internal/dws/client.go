@@ -137,7 +137,14 @@ func (c *Client) UploadFile(localPath, remotePath string) error {
 	req.ContentLength = int64(len(bodyBytes))
 	
 	// Use a simple HTTP client without digest transport
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			c.debugf("HTTP Redirect: %s -> %s", via[len(via)-1].URL, req.URL)
+			c.debugf("Redirect count: %d", len(via))
+			return nil
+		},
+	}
 	
 	resp, err := client.Do(req)
 	if err != nil {
@@ -235,7 +242,14 @@ func (c *Client) ListFiles(path string) ([]FileInfo, error) {
 	}
 
 	// Use a simple HTTP client without digest transport
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			c.debugf("HTTP Redirect: %s -> %s", via[len(via)-1].URL, req.URL)
+			c.debugf("Redirect count: %d", len(via))
+			return nil
+		},
+	}
 	
 	resp, err := client.Do(req)
 	if err != nil {
