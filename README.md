@@ -1,240 +1,287 @@
-# BrightSign SCP (bscp)
+# BrightSign CLI (bscli)
 
-A command-line tool for copying files to BrightSign players using the Diagnostic Web Server (DWS) API. This tool provides an `scp`-like interface for uploading files directly to the SD card storage of BrightSign players over HTTP.
-
-## Purpose
-
-`bscp` enables developers and system administrators to easily transfer files to BrightSign players without requiring SSH access or physical SD card removal. It uses the player's built-in DWS API with HTTP Digest Authentication to securely upload files to the player's storage.
+A comprehensive command-line interface and Go library for managing BrightSign players via their Diagnostic Web Server (DWS) API.
 
 ## Features
 
-- **scp-like syntax**: Familiar command-line interface similar to the standard Unix `scp` command
-- **HTTP Digest Authentication**: Secure authentication using the DWS password
-- **SD Card targeting**: All files are automatically uploaded to the SD card (`/storage/sd`)
-- **Upload verification**: Automatically verifies that uploaded files exist on the destination
-- **Cross-platform**: Works on Linux, macOS, and Windows
-- **IPv4 and hostname support**: Connect using IP addresses or hostnames
-
-## Usage
-
-### Basic Syntax
-
-```bash
-bscp <source_file> <host:destination_path>
-```
-
-### Examples
-
-Upload a file to the root of the SD card:
-```bash
-bscp presentation.ppt player.local:/storage/sd/
-```
-
-Upload a file to a specific location:
-```bash
-bscp video.mp4 192.168.1.100:/storage/sd/content/video.mp4
-```
-
-Upload an autorun :
-```bash
-bscp autorun.brs 10.0.1.50:/storage/sd/autorun.brs
-```
-
-Upload using relative paths (automatically prefixed with `/storage/sd/`):
-```bash
-bscp config.json player.local:config.json
-# Equivalent to: bscp config.json player.local:/storage/sd/config.json
-
-bscp video.mp4 192.168.1.100:content/videos/
-# Equivalent to: bscp video.mp4 192.168.1.100:/storage/sd/content/videos/
-```
-
-### Authentication
-
-The tool will prompt for the DWS password when connecting to the player:
-
-```
-Password for player.local:
-```
-
-Enter the password configured in the player's DWS settings.
-
-### Path Rules
-
-- **Absolute paths** (starting with `/`) are used as-is
-- **Relative paths** (not starting with `/`) are automatically prefixed with `/storage/sd/`
-- **All files are stored under `/storage/sd`** on the player
-- **Directory destinations** (ending with `/`) will use the source filename
-- **File destinations** will use the specified filename
+- **Complete DWS API Coverage**: Implements all available Local DWS API endpoints
+- **Go Library**: Clean, well-structured Go package for programmatic use
+- **CLI Tool**: User-friendly command-line interface
+- **Authentication**: Built-in digest authentication support
+- **Comprehensive Testing**: Unit tests for all components
 
 ## Installation
 
-### Option 1: Using Make
+### Download Binary
+
+Download the latest binary from the releases page, or build from source:
+
+### Build from Source
 
 ```bash
-make install
-```
-
-This will build the binary and copy it to `/usr/local/bin/bscp` (requires `sudo`).
-
-### Option 2: Manual Installation
-
-1. Build the binary:
-   ```bash
-   make build
-   ```
-
-2. Copy to your preferred location:
-   ```bash
-   cp bscp /usr/local/bin/
-   # or
-   cp bscp ~/bin/
-   ```
-
-### Option 3: Run from Source
-
-```bash
-go run main.go <source> <host:destination>
-```
-
-## Building from Source
-
-### Prerequisites
-
-- Go 1.21 or later
-- Make (optional, for convenience)
-
-### Build Commands
-
-#### Using Make (Recommended)
-
-```bash
-# Build binary
+git clone <repository-url>
+cd bscli
 make build
+```
 
-# Run tests
-make test
+### Install to System
 
-# Build and test
-make all
-
-# Clean build artifacts
-make clean
-
-# Install to /usr/local/bin (requires sudo)
+```bash
 make install
-
-# Uninstall from /usr/local/bin (requires sudo)
-make uninstall
 ```
 
-### Cross-compilation
+## Usage
 
-Build for different platforms:
+### CLI Usage
+
+The CLI takes the host as the first argument and will prompt for authentication:
 
 ```bash
-# Linux
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bscp-linux .
+# Get device information
+bscli 192.168.1.100 info device
 
-# Windows
-CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o bscp.exe .
+# List files on SD card
+bscli player.local file list /storage/sd/
 
-# macOS
-CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o bscp-macos .
+# Upload a file
+bscli 192.168.1.100 file upload local.mp4 /storage/sd/video.mp4
+
+# Reboot the player
+bscli 192.168.1.100 control reboot
+
+# Run network diagnostics
+bscli 192.168.1.100 diagnostics ping 8.8.8.8
 ```
 
-## Technical Details
+### Available Commands
 
-### API Compatibility
+- **info**: Get player information (device, health, time, video-mode, APIs)
+- **control**: Player control (reboot, snapshot, DWS settings, firmware)
+- **file**: File management (list, upload, download, delete, rename, mkdir, format)
+- **diagnostics**: Network diagnostics (ping, DNS, traceroute, interfaces, SSH, telnet)
+- **display**: Display control (brightness, contrast, volume, power - Moka displays)
+- **registry**: Registry management (get, set, delete, search, recovery URL)
+- **logs**: Log management (retrieve logs, supervisor logging)
+- **video**: Video output management (modes, EDID, power save, CEC)
 
-This tool is compatible with BrightSign players running firmware that supports the DWS API (most modern firmware versions). It uses the following API endpoints:
+### Authentication
 
-- `PUT /api/v1/files/{storage_device}/` - File upload
-- `GET /api/v1/files/{storage_device}/` - Directory listing (for verification)
-
-### Authentication Method
-
-The tool uses HTTP Digest Authentication with the following parameters:
-- **Username**: `admin` (fixed)
-- **Password**: DWS password configured on the player
-- **Algorithm**: MD5 (as per HTTP Digest spec)
-
-### Error Handling
-
-The tool provides detailed error messages for common issues:
-- **Connection failures**: Network connectivity problems
-- **Authentication errors**: Incorrect password or DWS disabled
-- **Path errors**: Invalid destination paths or permissions
-- **Upload failures**: Server errors or insufficient storage space
-
-## Troubleshooting
-
-### Common Issues
-
-**"Connection refused"**
-- Ensure the player is powered on and connected to the network
-- Verify the IP address or hostname is correct
-- Check that DWS is enabled on the player
-
-**"401 Unauthorized"**
-- Verify the DWS password is correct
-- Ensure DWS authentication is enabled on the player
-
-**"Invalid destination format"**
-- Destination must include both host and path: `host:/path`
-- Path must be absolute (start with `/`)
-
-**"Upload succeeded but file not found"**
-- This may occur due to timing issues or storage problems
-- Check available space on the SD card
-- Verify SD card is properly inserted and functional
-
-### Getting Help
+The CLI supports several authentication methods:
 
 ```bash
-bscp --help
+# Prompt for password (recommended for security)
+bscli 192.168.1.100 info device
+
+# Provide password via flag (not recommended for scripts)
+bscli 192.168.1.100 -p mypassword info device
+
+# Custom username (default is 'admin')
+bscli 192.168.1.100 -u myuser info device
+```
+
+### Debug Mode
+
+Enable debug output to see HTTP requests:
+
+```bash
+bscli 192.168.1.100 -d info device
+```
+
+## Go Library Usage
+
+The `pkg/brightsign` package provides a clean Go API:
+
+```go
+package main
+
+import (
+    "fmt"
+    "log"
+    "time"
+    
+    "bscli/pkg/brightsign"
+)
+
+func main() {
+    // Create client
+    client := brightsign.NewClient(brightsign.Config{
+        Host:     "192.168.1.100",
+        Username: "admin",
+        Password: "mypassword",
+        Debug:    false,
+        Timeout:  30 * time.Second,
+    })
+    
+    // Get device information
+    info, err := client.Info.GetInfo()
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    fmt.Printf("Model: %s\n", info.Model)
+    fmt.Printf("Serial: %s\n", info.Serial)
+    fmt.Printf("Firmware: %s\n", info.FWVersion)
+    
+    // Upload a file
+    err = client.Storage.UploadFile("local.mp4", "/storage/sd/video.mp4")
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    // List files
+    files, err := client.Storage.ListFiles("/storage/sd/", nil)
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    for _, file := range files {
+        fmt.Printf("%s: %d bytes\n", file.Name, file.Size)
+    }
+    
+    // Run ping diagnostic
+    result, err := client.Diagnostics.Ping("8.8.8.8")
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    if result.Success {
+        fmt.Printf("Ping successful: %d/%d packets, %.2fms avg\n", 
+            result.PacketsRecv, result.PacketsSent, result.AvgTime)
+    }
+    
+    // Take a snapshot
+    filename, err := client.Control.TakeSnapshot(nil)
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    fmt.Printf("Snapshot saved: %s\n", filename)
+}
+```
+
+## Library Services
+
+The library is organized into services that correspond to DWS API categories:
+
+- **Info**: Device information, health, time, video modes
+- **Control**: Player control, snapshots, DWS configuration
+- **Storage**: File operations, storage management
+- **Diagnostics**: Network diagnostics, SSH/telnet configuration
+- **Display**: Display control for Moka displays
+- **Registry**: Player registry management
+- **Logs**: Log retrieval and logging configuration
+- **Video**: Video output management, EDID, CEC
+
+## API Coverage
+
+This implementation covers all Local DWS API endpoints as documented in the BrightSign API documentation:
+
+### Info Endpoints
+- `GET /info/` - Basic player information
+- `GET /health/` - Player health status
+- `GET /time/` - Current time configuration
+- `PUT /time/` - Set time
+- `GET /video-mode/` - Current video mode
+- `GET /` - List all available APIs
+
+### Control Endpoints
+- `PUT /control/reboot/` - Reboot player
+- `GET /control/dws-password/` - DWS password status
+- `PUT /control/dws-password/` - Set/reset DWS password
+- `GET /control/local-dws/` - Local DWS status
+- `PUT /control/local-dws/` - Enable/disable local DWS
+- `POST /snapshot/` - Take screenshot
+- `GET /download-firmware/` - Download firmware
+
+### Storage Endpoints
+- `GET /files/:path/` - List files/directories
+- `POST /files/:path/` - Rename files
+- `PUT /files/:path/` - Upload files/create directories
+- `DELETE /files/:path/` - Delete files/directories
+- `DELETE /storage/:device/` - Format storage
+
+### Diagnostics Endpoints
+- `GET /diagnostics/` - Run network diagnostics
+- `GET /diagnostics/dns-lookup/:address/` - DNS lookup
+- `GET /diagnostics/ping/:ipAddress/` - Ping test
+- `GET /diagnostics/trace-route/:address/` - Traceroute
+- `GET /diagnostics/network-neighborhood/` - Network neighborhood
+- `GET /diagnostics/network-configuration/:interface/` - Network config
+- `PUT /diagnostics/network-configuration/:interface/` - Set network config
+- `GET /diagnostics/interfaces/` - List interfaces
+- Packet capture operations
+- SSH/Telnet configuration
+
+### Display Control Endpoints (Moka displays, BOS 9.0.189+)
+- `GET /display-control/` - All display settings
+- Brightness, contrast, volume controls
+- Power management
+- Firmware updates
+- Display information
+
+### Registry Endpoints
+- `GET /registry/` - Full registry dump
+- `GET /registry/:section/:key/` - Get registry value
+- `PUT /registry/:section/:key/` - Set registry value
+- `DELETE /registry/:section/:key/` - Delete registry value
+- `DELETE /registry/:section/` - Delete registry section
+- Recovery URL management
+- Registry flush
+
+### Logs Endpoints
+- `GET /logs/` - Get player logs
+- `GET /system/supervisor/logging/` - Supervisor logging level
+- `PUT /system/supervisor/logging/` - Set logging level
+
+### Video Endpoints
+- `GET /video/:connector/output/:device/` - Video output info
+- `GET /video/:connector/output/:device/edid/` - EDID information
+- Power save management
+- Video mode operations
+- `POST /sendCecX/` - CEC commands
+
+## Requirements
+
+- Go 1.21 or higher (for building from source)
+- BrightSign player with DWS enabled
+- Network connectivity to the player
+
+## Testing
+
+Run tests with:
+
+```bash
+make test
+```
+
+Or run specific tests:
+
+```bash
+go test ./pkg/brightsign -v
+go test ./internal/cli -v
 ```
 
 ## Development
 
-### Project Structure
+The project structure:
 
 ```
-├── main.go                 # Entry point
-├── internal/
-│   ├── cli/               # Command-line interface
-│   │   ├── cli.go         # CLI logic and argument parsing
-│   │   └── cli_test.go    # CLI tests
-│   └── dws/               # DWS API client
-│       ├── client.go      # HTTP client with digest auth
-│       └── client_test.go # Client tests
-├── Makefile               # Build automation
-├── go.mod                 # Go module definition
-└── README.md             # This file
+├── cmd/bscli/          # CLI entry point
+├── pkg/brightsign/     # Go library package
+├── internal/cli/       # CLI implementation
+├── bs-api-docs-20250614/ # API documentation
+├── Makefile           # Build configuration
+└── README.md          # This file
 ```
-
-### Running Tests
-
-```bash
-# Run all tests
-make test
-
-# Run tests with verbose output
-go test -v ./...
-
-# Run tests for specific package
-go test ./internal/dws
-```
-
-### Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass: `make test`
-6. Submit a pull request
 
 ## License
 
-Apache 2.0.  See LICENSE.txt
+See LICENSE.txt for details.
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for new functionality
+4. Ensure all tests pass
+5. Submit a pull request

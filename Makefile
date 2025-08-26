@@ -5,7 +5,7 @@ GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
 GOMOD=$(GOCMD) mod
-BINARY_NAME=bscp
+BINARY_NAME=bscli
 BINARY_UNIX=$(BINARY_NAME)_unix
 
 # Build flags
@@ -17,10 +17,10 @@ CGO_FLAGS=CGO_ENABLED=0
 all: test build
 
 build:
-	$(CGO_FLAGS) $(GOBUILD) $(BUILD_FLAGS) -o $(BINARY_NAME) -v
+	$(CGO_FLAGS) $(GOBUILD) $(BUILD_FLAGS) -o $(BINARY_NAME) ./cmd/bscli
 
 build-linux:
-	$(CGO_FLAGS) GOOS=linux GOARCH=amd64 $(GOBUILD) $(BUILD_FLAGS) -o $(BINARY_UNIX) -v
+	$(CGO_FLAGS) GOOS=linux GOARCH=amd64 $(GOBUILD) $(BUILD_FLAGS) -o $(BINARY_UNIX) ./cmd/bscli
 
 test:
 	$(CGO_FLAGS) $(GOTEST) -v ./...

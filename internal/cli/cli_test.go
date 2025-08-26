@@ -1,270 +1,109 @@
 package cli
 
 import (
-	"os"
-	"strings"
 	"testing"
+
+	"bscli/pkg/brightsign"
 )
 
-func TestShowUsage(t *testing.T) {
-	err := showUsage()
+func TestGetClient_ValidConfig(t *testing.T) {
+	// Set global vars for testing
+	host = "192.168.1.100"
+	username = "admin"
+	password = "testpass"
+	debug = true
+
+	client, err := getClient()
 	if err != nil {
-		t.Errorf("Expected no error from showUsage, got: %v", err)
+		t.Fatalf("getClient failed: %v", err)
+	}
+
+	if client == nil {
+		t.Fatal("Expected client to be created, got nil")
+	}
+
+	// Verify client was configured correctly by checking that services exist
+	if client.Info == nil {
+		t.Error("Info service not initialized")
+	}
+	if client.Control == nil {
+		t.Error("Control service not initialized")
+	}
+	if client.Storage == nil {
+		t.Error("Storage service not initialized")
 	}
 }
 
-func TestFileExists(t *testing.T) {
-	tempFile, err := os.CreateTemp("", "test-exists-*.txt")
-	if err != nil {
-		t.Fatalf("Failed to create temp file: %v", err)
-	}
-	defer os.Remove(tempFile.Name())
-	tempFile.Close()
-	
-	if !fileExists(tempFile.Name()) {
-		t.Error("Expected existing file to return true")
-	}
-	
-	if fileExists("/nonexistent/file/path") {
-		t.Error("Expected nonexistent file to return false")
-	}
-}
+func TestGetClient_MissingHost(t *testing.T) {
+	// Reset global vars
+	host = ""
+	username = "admin"
+	password = "testpass"
 
-func TestRunInvalidArgs(t *testing.T) {
-	tests := []struct {
-		name string
-		args []string
-		expectError bool
-	}{
-		{
-			name: "no arguments",
-			args: []string{},
-			expectError: false, // shows usage
-		},
-		{
-			name: "help flag",
-			args: []string{"-h"},
-			expectError: false, // shows usage
-		},
-		{
-			name: "help flag long",
-			args: []string{"--help"},
-			expectError: false, // shows usage
-		},
-		{
-			name: "too few arguments",
-			args: []string{"file.txt"},
-			expectError: true,
-		},
-		{
-			name: "too many arguments",
-			args: []string{"file.txt", "host:path", "extra"},
-			expectError: true,
-		},
-		{
-			name: "debug flag with valid args",
-			args: []string{"-debug", "file.txt", "host:/storage/sd/path"},
-			expectError: true, // will fail because file doesn't exist
-		},
-		{
-			name: "debug flag short form with valid args",
-			args: []string{"-d", "file.txt", "host:/storage/sd/path"},
-			expectError: true, // will fail because file doesn't exist
-		},
-		{
-			name: "missing colon in destination",
-			args: []string{"file.txt", "hostpath"},
-			expectError: true,
-		},
-		{
-			name: "relative remote path", 
-			args: []string{"file.txt", "host:relative/path"},
-			expectError: true, // Still expect error due to nonexistent file.txt
-		},
-	}
-	
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := Run(tt.args)
-			if tt.expectError && err == nil {
-				t.Error("Expected error but got none")
-			}
-			if !tt.expectError && err != nil {
-				t.Errorf("Expected no error but got: %v", err)
-			}
-		})
-	}
-}
-
-func TestRunNonexistentFile(t *testing.T) {
-	args := []string{"/nonexistent/file.txt", "host:/remote/path"}
-	err := Run(args)
-	
+	_, err := getClient()
 	if err == nil {
-		t.Error("Expected error for nonexistent source file")
+		t.Error("Expected error when host is missing, got nil")
 	}
-	
-	if !strings.Contains(err.Error(), "source file does not exist") {
-		t.Errorf("Expected 'source file does not exist' error, got: %v", err)
+
+	expectedError := "host is required"
+	if err.Error() != expectedError {
+		t.Errorf("Expected error '%s', got '%s'", expectedError, err.Error())
 	}
 }
 
-func TestDebugFlagParsing(t *testing.T) {
+// Test helper functions
+func TestFormatSize(t *testing.T) {
 	tests := []struct {
-		name       string
-		args       []string
-		expectError bool
-		expectDebug bool
-	}{
-		{
-			name: "debug flag long form",
-			args: []string{"-debug", "file.txt", "host:/storage/sd/path"},
-			expectError: true, // will fail because file doesn't exist
-			expectDebug: true,
-		},
-		{
-			name: "debug flag short form", 
-			args: []string{"-d", "file.txt", "host:/storage/sd/path"},
-			expectError: true, // will fail because file doesn't exist
-			expectDebug: true,
-		},
-		{
-			name: "no debug flag",
-			args: []string{"file.txt", "host:/storage/sd/path"},
-			expectError: true, // will fail because file doesn't exist
-			expectDebug: false,
-		},
-	}
-	
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Just test that the flag parsing logic works without actual file operations
-			debug := false
-			var filteredArgs []string
-			
-			for _, arg := range tt.args {
-				if arg == "-debug" || arg == "-d" {
-					debug = true
-				} else {
-					filteredArgs = append(filteredArgs, arg)
-				}
-			}
-			
-			if debug != tt.expectDebug {
-				t.Errorf("Expected debug=%t, got debug=%t", tt.expectDebug, debug)
-			}
-			
-			if len(filteredArgs) != 2 {
-				t.Errorf("Expected 2 filtered args, got %d", len(filteredArgs))
-			}
-		})
-	}
-}
-
-func TestDestinationParsing(t *testing.T) {
-	tests := []struct {
-		destination string
-		expectError bool
-		expectedHost string
-		expectedPath string
-	}{
-		{
-			destination: "192.168.1.100:/storage/sd/file.txt",
-			expectError: false,
-			expectedHost: "192.168.1.100",
-			expectedPath: "/storage/sd/file.txt",
-		},
-		{
-			destination: "player.local:/videos/movie.mp4",
-			expectError: false,
-			expectedHost: "player.local",
-			expectedPath: "/videos/movie.mp4",
-		},
-		{
-			destination: "host:relative/path",
-			expectError: false,
-			expectedHost: "host", 
-			expectedPath: "relative/path", // Raw parsing, conversion happens later
-		},
-		{
-			destination: "no-colon-here",
-			expectError: true,
-		},
-	}
-	
-	for _, tt := range tests {
-		t.Run(tt.destination, func(t *testing.T) {
-			if !strings.Contains(tt.destination, ":") {
-				return // Skip parsing test for invalid formats
-			}
-			
-			parts := strings.SplitN(tt.destination, ":", 2)
-			if len(parts) != 2 {
-				if !tt.expectError {
-					t.Error("Expected successful parsing")
-				}
-				return
-			}
-			
-			host := parts[0]
-			remotePath := parts[1]
-			
-			if !tt.expectError {
-				if host != tt.expectedHost {
-					t.Errorf("Expected host '%s', got '%s'", tt.expectedHost, host)
-				}
-				if remotePath != tt.expectedPath {
-					t.Errorf("Expected path '%s', got '%s'", tt.expectedPath, remotePath)
-				}
-			}
-			
-			if tt.expectError && strings.HasPrefix(remotePath, "/") {
-				t.Error("Expected error for relative path")
-			}
-		})
-	}
-}
-
-func TestRelativePathConversion(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
+		input    int64
 		expected string
 	}{
-		{
-			name:     "absolute path unchanged",
-			input:    "/storage/sd/file.txt",
-			expected: "/storage/sd/file.txt",
-		},
-		{
-			name:     "relative path converted",
-			input:    "file.txt",
-			expected: "/storage/sd/file.txt",
-		},
-		{
-			name:     "relative path with subdirs converted",
-			input:    "folder/file.txt",
-			expected: "/storage/sd/folder/file.txt",
-		},
-		{
-			name:     "empty path converted",
-			input:    "",
-			expected: "/storage/sd/",
-		},
+		{0, "0 B"},
+		{512, "512 B"},
+		{1024, "1.0 KB"},
+		{2048, "2.0 KB"},
+		{1536, "1.5 KB"},
+		{1048576, "1.0 MB"},
+		{1073741824, "1.0 GB"},
+		{5368709120, "5.0 GB"},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			remotePath := tt.input
-			
-			// Apply the same logic as in the CLI
-			if !strings.HasPrefix(remotePath, "/") {
-				remotePath = "/storage/sd/" + remotePath
-			}
-			
-			if remotePath != tt.expected {
-				t.Errorf("Expected '%s', got '%s'", tt.expected, remotePath)
-			}
-		})
+	for _, test := range tests {
+		result := formatSize(test.input)
+		if result != test.expected {
+			t.Errorf("formatSize(%d): expected %s, got %s", test.input, test.expected, result)
+		}
+	}
+}
+
+// Mock test to verify brightsign client creation
+func TestBrightSignClientCreation(t *testing.T) {
+	config := brightsign.Config{
+		Host:     "test.local",
+		Username: "admin",
+		Password: "password",
+		Debug:    false,
+	}
+
+	client := brightsign.NewClient(config)
+	if client == nil {
+		t.Fatal("Expected client to be created")
+	}
+
+	// Verify all services are initialized
+	services := map[string]interface{}{
+		"Info":        client.Info,
+		"Control":     client.Control,
+		"Storage":     client.Storage,
+		"Diagnostics": client.Diagnostics,
+		"Display":     client.Display,
+		"Registry":    client.Registry,
+		"Logs":        client.Logs,
+		"Video":       client.Video,
+	}
+
+	for name, service := range services {
+		if service == nil {
+			t.Errorf("%s service not initialized", name)
+		}
 	}
 }

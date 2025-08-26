@@ -3,143 +3,112 @@ package cli
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 	"syscall"
 
-	"bscp/internal/dws"
+	"bscli/pkg/brightsign"
+	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
 
-const (
-	sdCardPath = "/storage/sd"
+var (
+	// Global flags
+	host     string
+	username string
+	password string
+	debug    bool
+
+	// Root command
+	rootCmd = &cobra.Command{
+		Use:   "bscli [host] [command]",
+		Short: "BrightSign CLI for controlling players via DWS API",
+		Long: `bscli is a command-line interface for managing BrightSign players
+through their Diagnostic Web Server (DWS) API.
+
+Usage: bscli [host] [command] [args...]
+
+Examples:
+  bscli 192.168.1.100 info device
+  bscli player.local file list /storage/sd/
+  bscli 10.0.0.50 control reboot
+
+It provides commands for:
+  - Device information and status
+  - File management (upload, download, list)
+  - System control (reboot, snapshot, etc.)
+  - Network diagnostics
+  - Registry management
+  - Display control
+  - And more...`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Help()
+		},
+	}
 )
 
-func Run(args []string) error {
+// Execute runs the CLI
+func Execute() error {
+	// Parse host from command line arguments manually
+	args := os.Args[1:] // Skip program name
+	
 	if len(args) == 0 {
-		return showUsage()
+		return rootCmd.Help()
 	}
-
-	if args[0] == "-h" || args[0] == "--help" {
-		return showUsage()
-	}
-
-	// Parse debug flag
-	debug := false
-	var filteredArgs []string
 	
-	for _, arg := range args {
-		if arg == "-debug" || arg == "-d" {
-			debug = true
-		} else {
-			filteredArgs = append(filteredArgs, arg)
+	// First argument should be the host
+	host = args[0]
+	
+	// Set remaining arguments for cobra to parse
+	rootCmd.SetArgs(args[1:])
+	
+	return rootCmd.Execute()
+}
+
+func init() {
+	// Global flags (no longer need host flag)
+	rootCmd.PersistentFlags().StringVarP(&username, "user", "u", "admin", "Username for authentication")
+	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Password for authentication")
+	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "Enable debug output")
+
+	// Add command groups
+	addInfoCommands()
+	addControlCommands()
+	addFileCommands()
+	addDiagnosticsCommands()
+	addDisplayCommands()
+	addRegistryCommands()
+	addLogsCommands()
+	addVideoCommands()
+}
+
+// getClient creates a BrightSign client with authentication
+func getClient() (*brightsign.Client, error) {
+	if host == "" {
+		return nil, fmt.Errorf("host is required")
+	}
+
+	// Prompt for password if not provided
+	if password == "" {
+		fmt.Printf("Password for %s@%s: ", username, host)
+		bytePassword, err := term.ReadPassword(int(syscall.Stdin))
+		if err != nil {
+			return nil, fmt.Errorf("failed to read password: %w", err)
 		}
+		fmt.Println()
+		password = string(bytePassword)
 	}
 
-	if len(filteredArgs) != 2 {
-		return fmt.Errorf("invalid number of arguments")
+	config := brightsign.Config{
+		Host:     host,
+		Username: username,
+		Password: password,
+		Debug:    debug,
 	}
 
-	source := filteredArgs[0]
-	destination := filteredArgs[1]
-
-	if !strings.Contains(destination, ":") {
-		return fmt.Errorf("destination must be in format host:path")
-	}
-
-	// Split by the last colon to handle host:port:path or host:path
-	lastColon := strings.LastIndex(destination, ":")
-	if lastColon == -1 {
-		return fmt.Errorf("invalid destination format, expected host:path")
-	}
-
-	host := destination[:lastColon]
-	remotePath := destination[lastColon+1:]
-
-	// If path doesn't start with /, assume it's relative to /storage/sd
-	if !strings.HasPrefix(remotePath, "/") {
-		remotePath = "/storage/sd/" + remotePath
-	}
-
-	if !fileExists(source) {
-		return fmt.Errorf("source file does not exist: %s", source)
-	}
-
-	password, err := promptPassword(host)
-	if err != nil {
-		return fmt.Errorf("failed to get password: %w", err)
-	}
-
-	client := dws.NewClient(host, password, debug)
-
-	// If remotePath ends with '/', it's a directory - append source filename
-	var targetPath string
-	if strings.HasSuffix(remotePath, "/") {
-		targetPath = filepath.Join(remotePath, filepath.Base(source))
-	} else {
-		targetPath = remotePath
-	}
-	
-	// Ensure the path starts with /storage/sd
-	if !strings.HasPrefix(targetPath, sdCardPath) {
-		return fmt.Errorf("remote path must be under %s, got: %s", sdCardPath, targetPath)
-	}
-	
-	// Check if target path tries to create subdirectories (only allow root level files)
-	pathParts := strings.Split(strings.Trim(targetPath, "/"), "/")
-	if len(pathParts) > 3 {
-		return fmt.Errorf("subdirectories not supported to prevent directory creation, use only /storage/sd/filename")
-	}
-
-	fmt.Printf("Uploading %s to %s:%s...\n", source, host, targetPath)
-
-	err = client.UploadFile(source, targetPath)
-	if err != nil {
-		return fmt.Errorf("upload failed: %w", err)
-	}
-
-	fmt.Printf("Verifying file exists at destination...\n")
-
-	exists, err := client.VerifyFileExists(targetPath)
-	if err != nil {
-		return fmt.Errorf("verification failed: %w", err)
-	}
-
-	if !exists {
-		return fmt.Errorf("file upload succeeded but file not found at destination")
-	}
-
-	fmt.Printf("Successfully copied %s to %s:%s\n", source, host, targetPath)
-	return nil
+	return brightsign.NewClient(config), nil
 }
 
-func showUsage() error {
-	fmt.Printf("Usage: bscp [-debug|-d] <source> <host:destination>\n")
-	fmt.Printf("\nCopy files to BrightSign player using DWS API\n")
-	fmt.Printf("\nOptions:\n")
-	fmt.Printf("  -debug, -d    Enable debug output\n")
-	fmt.Printf("\nExamples:\n")
-	fmt.Printf("  bscp file.txt 192.168.1.100:/storage/sd/file.txt\n")
-	fmt.Printf("  bscp -debug video.mp4 player.local:/storage/sd/video.mp4\n")
-	fmt.Printf("  bscp -d video.mp4 player.local:/storage/sd/\n")
-	fmt.Printf("\nFiles are copied to the root of the SD card (/storage/sd/) only.\n")
-	fmt.Printf("Subdirectories are not supported to prevent directory creation errors.\n")
-	return nil
-}
-
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
-}
-
-func promptPassword(host string) (string, error) {
-	fmt.Printf("Password for %s: ", host)
-	
-	bytePassword, err := term.ReadPassword(int(syscall.Stdin))
-	if err != nil {
-		return "", err
-	}
-	
-	fmt.Println()
-	return string(bytePassword), nil
+// handleError prints an error message and exits
+func handleError(err error) {
+	fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	os.Exit(1)
 }
