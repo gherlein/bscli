@@ -22,6 +22,7 @@ func main() {
         Username: "admin",
         Password: "mypassword",
         Debug:    false,
+        Insecure: false,  // Set to true for self-signed certificates
         Timeout:  30 * time.Second,
     })
 

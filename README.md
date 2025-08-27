@@ -161,6 +161,7 @@ export BSCLI_TEST_HOST=192.168.1.100
 export BSCLI_TEST_PASSWORD=yourpassword
 export BSCLI_TEST_USERNAME=admin       # Optional, defaults to "admin"
 export BSCLI_TEST_DEBUG=true           # Optional, enables debug output
+export BSCLI_TEST_INSECURE=true        # Optional, accept locally signed certificates
 ```
 
 Run basic information gathering:

@@ -2,9 +2,9 @@
 
 This directory contains example programs demonstrating how to use the BrightSign Go library (`pkg/brightsign`) directly in your own applications.
 
-## Example Programs
+## Example Program
 
-### 1. basic_usage.go
+### basic_usage.go
 A comprehensive example that uses environment variables for configuration and provides command-line options:
 - Reads configuration from environment variables (same as integration tests)
 - Provides multiple command modes
@@ -17,7 +17,7 @@ A comprehensive example that uses environment variables for configuration and pr
   - Getting video output information
 - Includes proper error handling
 
-## Building the Examples
+## Building the Example
 
 ### Using Make (if working)
 ```bash
@@ -61,6 +61,20 @@ Run with specific commands:
 ./basic_usage diagnostics   # Run network diagnostics
 ./basic_usage registry      # Test registry operations
 ./basic_usage video         # Get video output information
+```
+
+### Command-Line Flags
+
+The example program also supports command-line flags that override environment variables:
+
+```bash
+./basic_usage --local       # Accept locally signed certificates (same as -l)
+./basic_usage -l            # Short form of --local
+./basic_usage --debug       # Enable debug output (same as -d)
+./basic_usage -d            # Short form of --debug
+
+# Combine flags with commands
+./basic_usage -l --debug diagnostics
 ```
 
 ## Example Output
