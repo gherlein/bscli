@@ -1,4 +1,4 @@
-BSCLI_TEST_PASSWORD=<password>
-BSCLI_TEST_HOST=<ip address or hostname of player>
-BSCLI_TEST_INSECURE=true|false
-BSCLI_TEST_DEBUG=true|false
+export BSCLI_TEST_PASSWORD=<password>
+export BSCLI_TEST_HOST=<player IP or hostname>
+export BSCLI_TEST_INSECURE=<true|false>
+export BSCLI_TEST_DEBUG=<true|false>

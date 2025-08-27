@@ -69,19 +69,15 @@ func Execute() error {
 
 func init() {
 	// Check environment variables for default values
-	if os.Getenv("BSCLI_TEST_DEBUG") == "true" {
-		debug = true
-	}
-	if os.Getenv("BSCLI_TEST_INSECURE") == "true" {
-		insecure = true
-	}
+	debugDefault := os.Getenv("BSCLI_TEST_DEBUG") == "true"
+	insecureDefault := os.Getenv("BSCLI_TEST_INSECURE") == "true"
 	
 	// Global flags (no longer need host flag)
 	rootCmd.PersistentFlags().StringVarP(&username, "user", "u", "admin", "Username for authentication")
 	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Password for authentication")
-	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "Enable debug output")
+	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", debugDefault, "Enable debug output")
 	rootCmd.PersistentFlags().BoolVarP(&jsonOutput, "json", "j", false, "Output raw JSON (for scripts)")
-	rootCmd.PersistentFlags().BoolVarP(&insecure, "local", "l", false, "Accept locally signed certificates (use HTTPS with insecure TLS)")
+	rootCmd.PersistentFlags().BoolVarP(&insecure, "local", "l", insecureDefault, "Accept locally signed certificates (use HTTPS with insecure TLS)")
 
 	// Add command groups
 	addInfoCommands()
