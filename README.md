@@ -1,6 +1,8 @@
 # BrightSign CLI (bscli)
 
-A comprehensive command-line interface and Go library for managing BrightSign players via their Diagnostic Web Server (DWS) API.
+## UNOFFICIAL TOOL - NOT AN OFFICIAL BRIGHTSIGN TOOL - PERSONAL PROJECT ONLY
+
+An experimental command-line tool and Go library for managing BrightSign players via their Diagnostic Web Server (DWS) API.
 
 ## Features
 
@@ -11,10 +13,6 @@ A comprehensive command-line interface and Go library for managing BrightSign pl
 - **Comprehensive Testing**: Unit tests for all components
 
 ## Installation
-
-### Download Binary
-
-Download the latest binary from the releases page, or build from source:
 
 ### Build from Source
 
@@ -79,6 +77,19 @@ bscli 192.168.1.100 -p mypassword info device
 bscli 192.168.1.100 -u myuser info device
 ```
 
+### TLS/HTTPS Support
+
+For BrightSign players using locally signed certificates (common in newer firmware):
+
+```bash
+# Use HTTPS with insecure TLS (skip certificate verification)
+bscli 192.168.1.100 --local info device
+bscli 192.168.1.100 -l info device
+
+# Can be combined with other flags
+bscli 192.168.1.100 --local -p mypassword info device
+```
+
 ### Debug Mode
 
 Enable debug output to see HTTP requests:
@@ -104,156 +115,59 @@ bscli 192.168.1.100 --json info device | jq '.serial'
 
 ## Go Library Usage
 
-The `pkg/brightsign` package provides a clean Go API:
+For detailed information about using the Go library programmatically, see [docs/library-use.md](docs/library-use.md).
 
-```go
-package main
+## Example Program
 
-import (
-    "fmt"
-    "log"
-    "time"
-    
-    "bscli/pkg/brightsign"
-)
+The `examples/` directory contains a comprehensive example program that demonstrates how to use the Go library:
 
-func main() {
-    // Create client
-    client := brightsign.NewClient(brightsign.Config{
-        Host:     "192.168.1.100",
-        Username: "admin",
-        Password: "mypassword",
-        Debug:    false,
-        Timeout:  30 * time.Second,
-    })
-    
-    // Get device information
-    info, err := client.Info.GetInfo()
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    fmt.Printf("Model: %s\n", info.Model)
-    fmt.Printf("Serial: %s\n", info.Serial)
-    fmt.Printf("Firmware: %s\n", info.FWVersion)
-    
-    // Upload a file
-    err = client.Storage.UploadFile("local.mp4", "/storage/sd/video.mp4")
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    // List files
-    files, err := client.Storage.ListFiles("/storage/sd/", nil)
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    for _, file := range files {
-        fmt.Printf("%s: %d bytes\n", file.Name, file.Size)
-    }
-    
-    // Run ping diagnostic
-    result, err := client.Diagnostics.Ping("8.8.8.8")
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    if result.Success {
-        fmt.Printf("Ping successful: %d/%d packets, %.2fms avg\n", 
-            result.PacketsRecv, result.PacketsSent, result.AvgTime)
-    }
-    
-    // Take a snapshot
-    filename, err := client.Control.TakeSnapshot(nil)
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    fmt.Printf("Snapshot saved: %s\n", filename)
-}
+### Building the Example
+
+```bash
+# Manual build (recommended)
+cd examples
+CGO_ENABLED=0 go build -o basic_usage basic_usage.go
+
+# Or using Make (if working)
+make example
 ```
 
-## Library Services
+### Running the Example
 
-The library is organized into services that correspond to DWS API categories:
+Set the required environment variables:
 
-- **Info**: Device information, health, time, video modes
-- **Control**: Player control, snapshots, DWS configuration
-- **Storage**: File operations, storage management
-- **Diagnostics**: Network diagnostics, SSH/telnet configuration
-- **Display**: Display control for Moka displays
-- **Registry**: Player registry management
-- **Logs**: Log retrieval and logging configuration
-- **Video**: Video output management, EDID, CEC
+```bash
+export BSCLI_TEST_HOST=192.168.1.100
+export BSCLI_TEST_PASSWORD=yourpassword
+export BSCLI_TEST_USERNAME=admin       # Optional, defaults to "admin"
+export BSCLI_TEST_DEBUG=true           # Optional, enables debug output
+```
 
-## API Coverage
+Run basic information gathering:
 
-This implementation covers all Local DWS API endpoints as documented in the BrightSign API documentation:
+```bash
+./examples/basic_usage
+```
 
-### Info Endpoints
-- `GET /info/` - Basic player information
-- `GET /health/` - Player health status
-- `GET /time/` - Current time configuration
-- `PUT /time/` - Set time
-- `GET /video-mode/` - Current video mode
-- `GET /` - List all available APIs
+Run with specific commands:
 
-### Control Endpoints
-- `PUT /control/reboot/` - Reboot player
-- `GET /control/dws-password/` - DWS password status
-- `PUT /control/dws-password/` - Set/reset DWS password
-- `GET /control/local-dws/` - Local DWS status
-- `PUT /control/local-dws/` - Enable/disable local DWS
-- `POST /snapshot/` - Take screenshot
-- `GET /download-firmware/` - Download firmware
+```bash
+./examples/basic_usage list-files    # List files on SD card
+./examples/basic_usage diagnostics   # Run network diagnostics
+./examples/basic_usage registry      # Test registry operations
+./examples/basic_usage video         # Get video output information
+```
 
-### Storage Endpoints
-- `GET /files/:path/` - List files/directories
-- `POST /files/:path/` - Rename files
-- `PUT /files/:path/` - Upload files/create directories
-- `DELETE /files/:path/` - Delete files/directories
-- `DELETE /storage/:device/` - Format storage
+The example program demonstrates:
+- Device information retrieval
+- Player health checking
+- File listing and management
+- Network diagnostics (ping, DNS lookup)
+- Registry operations (get, set, delete with cleanup)
+- Video output configuration
+- Proper error handling and environment variable usage
 
-### Diagnostics Endpoints
-- `GET /diagnostics/` - Run network diagnostics
-- `GET /diagnostics/dns-lookup/:address/` - DNS lookup
-- `GET /diagnostics/ping/:ipAddress/` - Ping test
-- `GET /diagnostics/trace-route/:address/` - Traceroute
-- `GET /diagnostics/network-neighborhood/` - Network neighborhood
-- `GET /diagnostics/network-configuration/:interface/` - Network config
-- `PUT /diagnostics/network-configuration/:interface/` - Set network config
-- `GET /diagnostics/interfaces/` - List interfaces
-- Packet capture operations
-- SSH/Telnet configuration
-
-### Display Control Endpoints (Moka displays, BOS 9.0.189+)
-- `GET /display-control/` - All display settings
-- Brightness, contrast, volume controls
-- Power management
-- Firmware updates
-- Display information
-
-### Registry Endpoints
-- `GET /registry/` - Full registry dump
-- `GET /registry/:section/:key/` - Get registry value
-- `PUT /registry/:section/:key/` - Set registry value
-- `DELETE /registry/:section/:key/` - Delete registry value
-- `DELETE /registry/:section/` - Delete registry section
-- Recovery URL management
-- Registry flush
-
-### Logs Endpoints
-- `GET /logs/` - Get player logs
-- `GET /system/supervisor/logging/` - Supervisor logging level
-- `PUT /system/supervisor/logging/` - Set logging level
-
-### Video Endpoints
-- `GET /video/:connector/output/:device/` - Video output info
-- `GET /video/:connector/output/:device/edid/` - EDID information
-- Power save management
-- Video mode operations
-- `POST /sendCecX/` - CEC commands
+For more details, see [examples/README.md](examples/README.md).
 
 ## Requirements
 

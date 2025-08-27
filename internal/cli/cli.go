@@ -18,6 +18,7 @@ var (
 	password string
 	debug    bool
 	jsonOutput bool
+	insecure bool
 
 	// Root command
 	rootCmd = &cobra.Command{
@@ -71,6 +72,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Password for authentication")
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "Enable debug output")
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output raw JSON (for scripts)")
+	rootCmd.PersistentFlags().BoolVarP(&insecure, "local", "l", false, "Accept locally signed certificates (use HTTPS with insecure TLS)")
 
 	// Add command groups
 	addInfoCommands()
@@ -105,6 +107,7 @@ func getClient() (*brightsign.Client, error) {
 		Username: username,
 		Password: password,
 		Debug:    debug,
+		Insecure: insecure,
 	}
 
 	return brightsign.NewClient(config), nil

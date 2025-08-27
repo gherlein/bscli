@@ -500,6 +500,117 @@ Gets video output information.
 }
 ```
 
+## Complete Usage Examples
+
+### Example 1: Get Device Information
+```bash
+$ bscli 192.168.1.100 -p mypassword info device
+Model: XT1144
+Serial: XTC35T000155
+Family: Sebring
+Boot Version: 8.5.47
+Firmware: 9.1.66
+Uptime: 3 days, 4:23:45 (276225 seconds)
+Network:
+  eth0 (ethernet/dhcp): 192.168.1.100
+```
+
+### Example 2: Upload a File
+```bash
+$ bscli 192.168.1.100 -p mypassword file upload video.mp4 /storage/sd/media/video.mp4
+Uploading video.mp4 to /storage/sd/media/video.mp4...
+Upload complete
+```
+
+### Example 3: Run Network Diagnostics
+```bash
+$ bscli 192.168.1.100 -p mypassword diagnostics ping 8.8.8.8
+PING 8.8.8.8: 4/4 packets received
+Packet Loss: 0.0%
+RTT min/avg/max = 10.20/12.50/15.10 ms
+```
+
+### Example 4: Set Registry Value
+```bash
+$ bscli 192.168.1.100 -p mypassword registry set networking hostname "player-lobby"
+Set networking/hostname = player-lobby
+```
+
+### Example 5: Get Logs with JSON Output
+```bash
+$ bscli 192.168.1.100 -p mypassword --json logs get
+"[123.456] System boot complete\n[124.567] Network connected\n[125.789] Starting autorun..."
+```
+
+### Example 6: Take a Screenshot
+```bash
+$ bscli 192.168.1.100 -p mypassword control snapshot --width 1920 --height 1080
+Snapshot saved: /storage/sd/snapshot_20250826_143022.jpg
+```
+
+### Example 7: Reboot the Player
+
+**Basic Reboot:**
+```bash
+$ bscli 192.168.1.100 -p mypassword control reboot
+Reboot initiated
+```
+
+**Reboot with Options:**
+```bash
+# Generate crash report before reboot
+$ bscli 192.168.1.100 -p mypassword control reboot --crash-report
+Reboot initiated
+
+# Factory reset (WARNING: This erases all settings!)
+$ bscli 192.168.1.100 -p mypassword control reboot --factory-reset
+Reboot initiated
+
+# Reboot and disable autorun script
+$ bscli 192.168.1.100 -p mypassword control reboot --disable-autorun
+Reboot initiated
+```
+
+**JSON Output:**
+```bash
+$ bscli 192.168.1.100 -p mypassword --json control reboot
+{"status":"rebooting","timestamp":"2025-08-26T14:30:45Z"}
+```
+
+**API Details for Reboot:**
+
+The reboot command sends a PUT request to `/api/v1/control/reboot/` with optional parameters:
+
+```bash
+# Behind the scenes HTTP request:
+PUT /api/v1/control/reboot/ HTTP/1.1
+Host: 192.168.1.100
+Authorization: Digest username="admin", realm="brightsign", ...
+Content-Type: application/json
+
+{
+  "crashReport": false,
+  "factoryReset": false,
+  "autorun": true
+}
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "result": "rebooting"
+  }
+}
+```
+
+**Important Notes:**
+- The player will immediately begin the reboot process
+- Network connection will be lost after the command succeeds
+- The player typically takes 30-60 seconds to fully reboot
+- If `--factory-reset` is used, all settings and files will be erased
+- The `--disable-autorun` flag prevents autorun scripts from executing after reboot
+
 ## Error Handling
 
 ### Error Response Format

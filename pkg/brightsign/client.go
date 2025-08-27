@@ -5,6 +5,7 @@ package brightsign
 import (
 	"bytes"
 	"crypto/md5"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -42,6 +43,7 @@ type Config struct {
 	Password string
 	Debug    bool
 	Timeout  time.Duration
+	Insecure bool // Skip TLS certificate verification for local certificates
 }
 
 // Response is the standard API response wrapper
@@ -60,8 +62,24 @@ func NewClient(config Config) *Client {
 		config.Timeout = 30 * time.Second
 	}
 
+	// Create HTTP client with optional insecure TLS
+	transport := &http.Transport{}
+	if config.Insecure {
+		transport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+	}
+
 	httpClient := &http.Client{
-		Timeout: config.Timeout,
+		Timeout:   config.Timeout,
+		Transport: transport,
+	}
+
+	// Determine protocol based on whether insecure mode is enabled
+	// Insecure mode typically means HTTPS with locally signed certs
+	protocol := "http"
+	if config.Insecure {
+		protocol = "https"
 	}
 
 	c := &Client{
@@ -70,7 +88,7 @@ func NewClient(config Config) *Client {
 		password: config.Password,
 		client:   httpClient,
 		debug:    config.Debug,
-		baseURL:  fmt.Sprintf("http://%s/api/v1", config.Host),
+		baseURL:  fmt.Sprintf("%s://%s/api/v1", protocol, config.Host),
 	}
 
 	// Initialize services

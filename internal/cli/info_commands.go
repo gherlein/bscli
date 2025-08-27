@@ -50,20 +50,42 @@ func addInfoCommands() {
 					fmt.Printf("Hostname: %s\n", info.Network.Hostname)
 				}
 				
+				// Handle Extensions field if present
 				if info.Extensions != nil {
-					fmt.Printf("\nExtensions:\n")
+					// Check if Extensions contains any actual data
 					switch ext := info.Extensions.(type) {
 					case map[string]interface{}:
-						for key, value := range ext {
-							fmt.Printf("  %s: %v\n", key, value)
+						// Check for nested "extensions" key (API returns {"extensions": [...]})
+						if extList, ok := ext["extensions"]; ok {
+							if list, ok := extList.([]interface{}); ok && len(list) > 0 {
+								fmt.Printf("\nExtensions:\n")
+								for _, item := range list {
+									fmt.Printf("  %v\n", item)
+								}
+							}
+						} else if len(ext) > 0 {
+							// Direct map of extensions
+							fmt.Printf("\nExtensions:\n")
+							for key, value := range ext {
+								fmt.Printf("  %s: %v\n", key, value)
+							}
+						}
+					case []interface{}:
+						if len(ext) > 0 {
+							fmt.Printf("\nExtensions:\n")
+							for _, item := range ext {
+								fmt.Printf("  %v\n", item)
+							}
 						}
 					case map[string]string:
-						for key, value := range ext {
-							fmt.Printf("  %s: %s\n", key, value)
+						if len(ext) > 0 {
+							fmt.Printf("\nExtensions:\n")
+							for key, value := range ext {
+								fmt.Printf("  %s: %s\n", key, value)
+							}
 						}
-					default:
-						fmt.Printf("  %v\n", ext)
 					}
+					// Don't print anything if extensions are empty
 				}
 			}
 		},
