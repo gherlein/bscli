@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -10,6 +11,17 @@ import (
 )
 
 func main() {
+	// Define command-line flags
+	var (
+		localFlag = flag.Bool("local", false, "Accept locally signed certificates (use HTTPS with insecure TLS)")
+		lFlag     = flag.Bool("l", false, "Accept locally signed certificates (short form)")
+		debugFlag = flag.Bool("debug", false, "Enable debug output")
+		dFlag     = flag.Bool("d", false, "Enable debug output (short form)")
+	)
+	
+	// Parse command-line flags
+	flag.Parse()
+	
 	// Get configuration from environment variables (same as integration tests)
 	host := os.Getenv("BSCLI_TEST_HOST")
 	if host == "" {
@@ -26,8 +38,9 @@ func main() {
 		username = "admin"
 	}
 
-	debug := os.Getenv("BSCLI_TEST_DEBUG") == "true"
-	insecure := os.Getenv("BSCLI_TEST_INSECURE") == "true"
+	// Check both environment variable and flags for debug and insecure settings
+	debug := os.Getenv("BSCLI_TEST_DEBUG") == "true" || *debugFlag || *dFlag
+	insecure := os.Getenv("BSCLI_TEST_INSECURE") == "true" || *localFlag || *lFlag
 
 	// Create a new BrightSign client with environment configuration
 	protocol := "HTTP"
@@ -90,7 +103,8 @@ func main() {
 	}
 
 	// Example 4: List files on SD card (if command arg provided)
-	if len(os.Args) > 1 && os.Args[1] == "list-files" {
+	args := flag.Args()
+	if len(args) > 0 && args[0] == "list-files" {
 		fmt.Println("\n=== Files on SD Card ===")
 		files, err := client.Storage.ListFiles("/storage/sd/", nil)
 		if err != nil {
@@ -111,7 +125,7 @@ func main() {
 	}
 
 	// Example 5: Run diagnostics (if command arg provided)
-	if len(os.Args) > 1 && os.Args[1] == "diagnostics" {
+	if len(args) > 0 && args[0] == "diagnostics" {
 		fmt.Println("\n=== Running Network Diagnostics ===")
 		
 		// Ping test
@@ -156,7 +170,7 @@ func main() {
 	}
 
 	// Example 6: Registry operations (if command arg provided)
-	if len(os.Args) > 1 && os.Args[1] == "registry" {
+	if len(args) > 0 && args[0] == "registry" {
 		fmt.Println("\n=== Registry Operations ===")
 		
 		// Try to get hostname from registry
@@ -201,7 +215,7 @@ func main() {
 	}
 
 	// Example 7: Video output information (if command arg provided)
-	if len(os.Args) > 1 && os.Args[1] == "video" {
+	if len(args) > 0 && args[0] == "video" {
 		fmt.Println("\n=== Video Output Information ===")
 		
 		// Try common video output combinations
@@ -236,14 +250,19 @@ func main() {
 	}
 
 	// Show available commands if none provided
-	if len(os.Args) == 1 {
+	if len(args) == 0 {
 		fmt.Println("\n=== Available Commands ===")
 		fmt.Println("Run with additional arguments to see more examples:")
 		fmt.Println("  ./examples/basic_usage list-files   # List files on SD card")
 		fmt.Println("  ./examples/basic_usage diagnostics  # Run network diagnostics")
 		fmt.Println("  ./examples/basic_usage registry     # Test registry operations")
 		fmt.Println("  ./examples/basic_usage video        # Get video output info")
-		fmt.Println("\nSet BSCLI_TEST_DEBUG=true for debug output")
+		fmt.Println("\nFlags:")
+		fmt.Println("  -l, --local    Accept locally signed certificates (HTTPS with insecure TLS)")
+		fmt.Println("  -d, --debug    Enable debug output")
+		fmt.Println("\nEnvironment variables:")
+		fmt.Println("  BSCLI_TEST_DEBUG=true     Enable debug output")
+		fmt.Println("  BSCLI_TEST_INSECURE=true  Accept locally signed certificates")
 	}
 
 	fmt.Println("\n=== Done ===")

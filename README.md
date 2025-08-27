@@ -86,9 +86,15 @@ For BrightSign players using locally signed certificates (common in newer firmwa
 bscli 192.168.1.100 --local info device
 bscli 192.168.1.100 -l info device
 
+# Using environment variable
+export BSCLI_TEST_INSECURE=true
+bscli 192.168.1.100 info device
+
 # Can be combined with other flags
 bscli 192.168.1.100 --local -p mypassword info device
 ```
+
+If you encounter a TLS certificate error, the CLI will provide helpful suggestions.
 
 ### Debug Mode
 
@@ -96,11 +102,24 @@ Enable debug output to see HTTP requests:
 
 ```bash
 bscli 192.168.1.100 -d info device
+
+# Or using environment variable
+export BSCLI_TEST_DEBUG=true
+bscli 192.168.1.100 info device
 ```
+
+### Environment Variables
+
+The CLI supports the following environment variables:
+
+- `BSCLI_TEST_DEBUG=true` - Enable debug output (equivalent to -d flag)
+- `BSCLI_TEST_INSECURE=true` - Accept locally signed certificates (equivalent to -l flag)
+
+These environment variables are the same as those used by the example program and integration tests, providing consistency across all tools.
 
 ### JSON Output
 
-For scripting and automation, use the `--json` flag to get raw JSON output:
+For scripting and automation, use the `--json` or `-j` flag to get raw JSON output:
 
 ```bash
 # Human-readable output (default)
@@ -108,9 +127,10 @@ bscli 192.168.1.100 info device
 
 # JSON output for scripts
 bscli 192.168.1.100 --json info device
+bscli 192.168.1.100 -j info device
 
 # Parse with jq
-bscli 192.168.1.100 --json info device | jq '.serial'
+bscli 192.168.1.100 -j info device | jq '.serial'
 ```
 
 ## Go Library Usage

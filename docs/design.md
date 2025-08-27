@@ -33,7 +33,8 @@ The BrightSign CLI (`bscli`) is designed as a modular command-line interface for
 2. **Reusable Library**: The `/pkg/brightsign` package can be used independently as a Go SDK
 3. **Service-Oriented**: Each API category (info, control, storage, etc.) has its own service
 4. **Flexible Data Handling**: Uses `interface{}` types to handle varying API responses
-5. **Dual Output Modes**: Human-readable by default, JSON with `--json` flag
+5. **Dual Output Modes**: Human-readable by default, JSON with `-j/--json` flag
+6. **Protocol Flexibility**: Supports both HTTP and HTTPS with self-signed certificates
 
 ## Component Design
 
@@ -147,6 +148,25 @@ Authorization: Digest username="admin",
 ```
 
 ## Command Structure
+
+### Global Flags
+
+The CLI supports the following global flags:
+
+- `-u, --user string` - Username for authentication (default "admin")
+- `-p, --password string` - Password for authentication
+- `-d, --debug` - Enable debug output
+- `-j, --json` - Output raw JSON (for scripts)
+- `-l, --local` - Accept locally signed certificates (use HTTPS with insecure TLS)
+
+### Environment Variables
+
+The CLI supports the following environment variables:
+
+- `BSCLI_TEST_DEBUG=true` - Enable debug output (equivalent to -d flag)
+- `BSCLI_TEST_INSECURE=true` - Accept locally signed certificates (equivalent to -l flag)
+
+These environment variables provide consistency with the integration test suite and example programs.
 
 ### Command Hierarchy
 
@@ -632,6 +652,29 @@ The CLI handles errors at multiple levels:
 2. **Authentication Errors**: Invalid credentials, expired sessions
 3. **API Errors**: Resource not found, invalid parameters
 4. **Parsing Errors**: Malformed JSON responses
+5. **TLS Certificate Errors**: Self-signed or locally signed certificates
+
+#### TLS Certificate Error Handling
+
+When the CLI detects a TLS certificate error (common with BrightSign players using self-signed certificates), it provides helpful suggestions:
+
+**Human-readable output:**
+```
+Error: request failed: Get "https://player.local/api/v1/info/": tls: failed to verify certificate: x509: certificate is not standards compliant
+
+This appears to be a TLS certificate error. The player may be using a self-signed certificate.
+Try one of the following:
+  1. Use the --local or -l flag to accept locally signed certificates
+  2. Set environment variable: export BSCLI_TEST_INSECURE=true
+```
+
+**JSON output with -j flag:**
+```json
+{
+  "error": "request failed: Get \"https://player.local/api/v1/info/\": tls: failed to verify certificate: x509: certificate is not standards compliant",
+  "suggestion": "This appears to be a TLS certificate error. Try using --local or -l flag, or set BSCLI_TEST_INSECURE=true"
+}
+```
 
 ### Error Output Modes
 

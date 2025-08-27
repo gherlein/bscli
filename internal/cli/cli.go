@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"syscall"
 
 	"bscli/pkg/brightsign"
@@ -67,11 +68,19 @@ func Execute() error {
 }
 
 func init() {
+	// Check environment variables for default values
+	if os.Getenv("BSCLI_TEST_DEBUG") == "true" {
+		debug = true
+	}
+	if os.Getenv("BSCLI_TEST_INSECURE") == "true" {
+		insecure = true
+	}
+	
 	// Global flags (no longer need host flag)
 	rootCmd.PersistentFlags().StringVarP(&username, "user", "u", "admin", "Username for authentication")
 	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Password for authentication")
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "Enable debug output")
-	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output raw JSON (for scripts)")
+	rootCmd.PersistentFlags().BoolVarP(&jsonOutput, "json", "j", false, "Output raw JSON (for scripts)")
 	rootCmd.PersistentFlags().BoolVarP(&insecure, "local", "l", false, "Accept locally signed certificates (use HTTPS with insecure TLS)")
 
 	// Add command groups
@@ -115,14 +124,52 @@ func getClient() (*brightsign.Client, error) {
 
 // handleError prints an error message and exits
 func handleError(err error) {
-	if !jsonOutput {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	errMsg := err.Error()
+	
+	// Check for TLS certificate errors and provide helpful suggestions
+	if isTLSError(errMsg) {
+		helpfulMsg := errMsg + "\n\nThis appears to be a TLS certificate error. The player may be using a self-signed certificate.\nTry one of the following:\n  1. Use the --local or -l flag to accept locally signed certificates\n  2. Set environment variable: export BSCLI_TEST_INSECURE=true"
+		if jsonOutput {
+			// For JSON mode, include the helpful message in JSON
+			errorObj := map[string]string{
+				"error": errMsg,
+				"suggestion": "This appears to be a TLS certificate error. Try using --local or -l flag, or set BSCLI_TEST_INSECURE=true",
+			}
+			json.NewEncoder(os.Stdout).Encode(errorObj)
+		} else {
+			fmt.Fprintf(os.Stderr, "Error: %s\n", helpfulMsg)
+		}
 	} else {
-		// For JSON mode, output error as JSON to stderr
-		errorObj := map[string]string{"error": err.Error()}
-		json.NewEncoder(os.Stderr).Encode(errorObj)
+		// Regular error handling
+		if jsonOutput {
+			// For JSON mode, output error as JSON to stdout (not stderr for proper JSON parsing)
+			errorObj := map[string]string{"error": errMsg}
+			json.NewEncoder(os.Stdout).Encode(errorObj)
+		} else {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		}
 	}
 	os.Exit(1)
+}
+
+// isTLSError checks if an error message indicates a TLS certificate problem
+func isTLSError(errMsg string) bool {
+	tlsIndicators := []string{
+		"x509:",
+		"certificate",
+		"tls:",
+		"TLS",
+		"self-signed",
+		"verify certificate",
+		"certificate is not standards compliant",
+	}
+	
+	for _, indicator := range tlsIndicators {
+		if strings.Contains(errMsg, indicator) {
+			return true
+		}
+	}
+	return false
 }
 
 // outputJSON outputs data as JSON when --json flag is used
