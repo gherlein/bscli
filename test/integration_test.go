@@ -48,7 +48,7 @@ func runBSCLI(config *TestConfig, args ...string) ([]byte, error) {
 	}
 	cmdArgs = append(cmdArgs, args...)
 
-	cmd := exec.Command("../bscli", cmdArgs...)
+	cmd := exec.Command("./bscli", cmdArgs...)
 	return cmd.CombinedOutput()
 }
 
@@ -69,10 +69,28 @@ func runBSCLIJSON(config *TestConfig, args ...string) (map[string]interface{}, e
 	return result, nil
 }
 
+// runBSCLIJSONAny runs bscli with --json flag and returns the raw parsed JSON
+func runBSCLIJSONAny(config *TestConfig, args ...string) (interface{}, error) {
+	// Add --json flag
+	jsonArgs := append([]string{"--json"}, args...)
+	output, err := runBSCLI(config, jsonArgs...)
+	if err != nil {
+		return nil, fmt.Errorf("command failed: %w, output: %s", err, output)
+	}
+
+	var result interface{}
+	if err := json.Unmarshal(output, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON: %w, output: %s", err, output)
+	}
+
+	return result, nil
+}
+
 func TestMain(m *testing.M) {
 	// Build bscli binary for testing
 	fmt.Println("Building bscli for integration tests...")
-	cmd := exec.Command("go", "build", "-o", "../bscli", "../cmd/bscli")
+	cmd := exec.Command("go", "build", "-o", "test/bscli", "./cmd/bscli")
+	cmd.Dir = ".." // Set working directory to parent (root of the project)
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("Failed to build bscli: %v\n", err)
 		os.Exit(1)
@@ -82,7 +100,7 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 
 	// Cleanup
-	os.Remove("../bscli")
+	os.Remove("bscli")
 	
 	os.Exit(code)
 }
@@ -483,13 +501,15 @@ func TestLogsCommands(t *testing.T) {
 		}
 
 		// Test JSON output
-		result, err := runBSCLIJSON(config, "logs", "get")
+		result, err := runBSCLIJSONAny(config, "logs", "get")
 		if err != nil {
 			t.Fatalf("logs get JSON failed: %v", err)
 		}
 		// Should be a string
-		if _, ok := result.(string); !ok {
+		if resultStr, ok := result.(string); !ok {
 			t.Error("Expected logs to be a string in JSON output")
+		} else if len(resultStr) == 0 {
+			t.Error("Expected some log content in JSON output")
 		}
 	})
 
@@ -501,13 +521,15 @@ func TestLogsCommands(t *testing.T) {
 		}
 
 		// Test JSON output
-		result, err := runBSCLIJSON(config, "logs", "supervisor", "get-level")
+		result, err := runBSCLIJSONAny(config, "logs", "supervisor", "get-level")
 		if err != nil {
 			t.Fatalf("logs supervisor get-level JSON failed: %v", err)
 		}
 		// Should be a string indicating the level
-		if _, ok := result.(string); !ok {
+		if levelStr, ok := result.(string); !ok {
 			t.Error("Expected logging level to be a string")
+		} else if len(levelStr) == 0 {
+			t.Error("Expected non-empty logging level")
 		}
 	})
 }
@@ -526,7 +548,7 @@ func TestVideoCommands(t *testing.T) {
 
 		for _, connector := range connectors {
 			for _, device := range devices {
-				output, err := runBSCLI(config, "video", "output-info", connector, device)
+				_, err := runBSCLI(config, "video", "output-info", connector, device)
 				if err == nil {
 					// If it works, test JSON output too
 					result, err := runBSCLIJSON(config, "video", "output-info", connector, device)
@@ -551,7 +573,7 @@ func TestErrorHandling(t *testing.T) {
 
 	t.Run("InvalidCommand", func(t *testing.T) {
 		// Test invalid subcommand
-		output, err := runBSCLI(config, "invalid", "command")
+		_, err := runBSCLI(config, "invalid", "command")
 		if err == nil {
 			t.Error("Expected error for invalid command")
 		}

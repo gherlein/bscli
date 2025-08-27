@@ -98,7 +98,7 @@ type SSHConfig struct {
 }
 
 // RunDiagnostics runs network diagnostics
-func (s *DiagnosticsService) RunDiagnostics() ([]DiagnosticResult, error) {
+func (s *DiagnosticsService) RunDiagnostics() (interface{}, error) {
 	resp, err := s.client.doRequest("GET", "/diagnostics/", nil)
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func (s *DiagnosticsService) RunDiagnostics() ([]DiagnosticResult, error) {
 
 	var result struct {
 		Data struct {
-			Result []DiagnosticResult `json:"result"`
+			Result interface{} `json:"result"`
 		} `json:"data"`
 	}
 

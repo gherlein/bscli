@@ -31,13 +31,49 @@ func addDiagnosticsCommands() {
 				handleError(err)
 			}
 
+			if jsonOutput {
+				outputJSON(results)
+				return
+			}
+
 			fmt.Println("Diagnostic Results:")
-			for _, result := range results {
+			// Handle different possible result formats
+			switch resultData := results.(type) {
+			case []interface{}:
+				for _, r := range resultData {
+					if resultMap, ok := r.(map[string]interface{}); ok {
+						status := "✓"
+						if statusVal, ok := resultMap["status"]; ok && statusVal != "pass" {
+							status = "✗"
+						}
+						test := ""
+						if testVal, ok := resultMap["test"]; ok {
+							test = fmt.Sprintf("%v", testVal)
+						}
+						message := ""
+						if msgVal, ok := resultMap["message"]; ok {
+							message = fmt.Sprintf("%v", msgVal)
+						}
+						fmt.Printf("%s %s: %s\n", status, test, message)
+					}
+				}
+			case map[string]interface{}:
+				// Single diagnostic result object
 				status := "✓"
-				if result.Status != "pass" {
+				if statusVal, ok := resultData["status"]; ok && statusVal != "pass" {
 					status = "✗"
 				}
-				fmt.Printf("%s %s: %s\n", status, result.Test, result.Message)
+				test := ""
+				if testVal, ok := resultData["test"]; ok {
+					test = fmt.Sprintf("%v", testVal)
+				}
+				message := ""
+				if msgVal, ok := resultData["message"]; ok {
+					message = fmt.Sprintf("%v", msgVal)
+				}
+				fmt.Printf("%s %s: %s\n", status, test, message)
+			default:
+				fmt.Printf("%v\n", results)
 			}
 		},
 	}
@@ -56,6 +92,11 @@ func addDiagnosticsCommands() {
 			result, err := client.Diagnostics.Ping(args[0])
 			if err != nil {
 				handleError(err)
+			}
+
+			if jsonOutput {
+				outputJSON(result)
+				return
 			}
 
 			if result.Success {
@@ -84,6 +125,11 @@ func addDiagnosticsCommands() {
 			result, err := client.Diagnostics.DNSLookup(args[0], resolveAddr)
 			if err != nil {
 				handleError(err)
+			}
+
+			if jsonOutput {
+				outputJSON(result)
+				return
 			}
 
 			if result.Success {
@@ -145,6 +191,11 @@ func addDiagnosticsCommands() {
 			interfaces, err := client.Diagnostics.GetInterfaces()
 			if err != nil {
 				handleError(err)
+			}
+
+			if jsonOutput {
+				outputJSON(interfaces)
+				return
 			}
 
 			fmt.Println("Network interfaces:")

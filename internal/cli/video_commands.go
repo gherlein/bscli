@@ -29,6 +29,11 @@ func addVideoCommands() {
 				handleError(err)
 			}
 
+			if jsonOutput {
+				outputJSON(info)
+				return
+			}
+
 			fmt.Printf("Connector: %s\n", info.Connector)
 			fmt.Printf("Device: %s\n", info.Device)
 			fmt.Printf("Connected: %v\n", info.Connected)
@@ -58,6 +63,11 @@ func addVideoCommands() {
 			edid, err := client.Video.GetEDID(args[0], args[1])
 			if err != nil {
 				handleError(err)
+			}
+
+			if jsonOutput {
+				outputJSON(edid)
+				return
 			}
 
 			fmt.Printf("Manufacturer: %s\n", edid.Manufacturer)

@@ -2,8 +2,6 @@
 
 A comprehensive command-line interface and Go library for managing BrightSign players via their Diagnostic Web Server (DWS) API.
 
-
-
 ## Features
 
 - **Complete DWS API Coverage**: Implements all available Local DWS API endpoints

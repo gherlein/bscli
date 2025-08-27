@@ -15,7 +15,7 @@ type RegistryValue struct {
 }
 
 // GetAll returns entire registry dump (excludes hidden sections)
-func (s *RegistryService) GetAll() (map[string]map[string]string, error) {
+func (s *RegistryService) GetAll() (interface{}, error) {
 	resp, err := s.client.doRequest("GET", "/registry/", nil)
 	if err != nil {
 		return nil, err
@@ -23,7 +23,7 @@ func (s *RegistryService) GetAll() (map[string]map[string]string, error) {
 
 	var result struct {
 		Data struct {
-			Result map[string]map[string]string `json:"result"`
+			Result interface{} `json:"result"`
 		} `json:"data"`
 	}
 

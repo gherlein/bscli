@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 )
 
 func TestInfoService_GetInfo(t *testing.T) {
@@ -65,7 +64,7 @@ func TestInfoService_GetInfo(t *testing.T) {
 func TestInfoService_GetHealth(t *testing.T) {
 	expectedHealth := HealthInfo{
 		Status:     "running",
-		StatusTime: time.Now(),
+		StatusTime: "2025-08-26 16:37:37 PST",
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -214,7 +213,7 @@ func TestInfoService_ListAPIs(t *testing.T) {
 		
 		response := struct {
 			Data struct {
-				Result []string `json:"result"`
+				Result interface{} `json:"result"`
 			} `json:"data"`
 		}{}
 		response.Data.Result = expectedAPIs
@@ -237,13 +236,29 @@ func TestInfoService_ListAPIs(t *testing.T) {
 		t.Fatalf("ListAPIs failed: %v", err)
 	}
 
-	if len(apis) != len(expectedAPIs) {
-		t.Errorf("Expected %d APIs, got %d", len(expectedAPIs), len(apis))
+	// Convert interface{} to []interface{} for testing
+	apiList, ok := apis.([]interface{})
+	if !ok {
+		t.Errorf("Expected APIs to be []interface{}, got %T", apis)
+		return
+	}
+
+	if len(apiList) != len(expectedAPIs) {
+		t.Errorf("Expected %d APIs, got %d", len(expectedAPIs), len(apiList))
 	}
 
 	for i, expectedAPI := range expectedAPIs {
-		if i >= len(apis) || apis[i] != expectedAPI {
-			t.Errorf("Expected API %s at index %d, got %s", expectedAPI, i, apis[i])
+		if i >= len(apiList) {
+			t.Errorf("Expected API %s at index %d, but got fewer APIs", expectedAPI, i)
+			continue
+		}
+		apiStr, ok := apiList[i].(string)
+		if !ok {
+			t.Errorf("Expected API at index %d to be string, got %T", i, apiList[i])
+			continue
+		}
+		if apiStr != expectedAPI {
+			t.Errorf("Expected API %s at index %d, got %s", expectedAPI, i, apiStr)
 		}
 	}
 }

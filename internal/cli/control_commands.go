@@ -110,6 +110,11 @@ func addControlCommands() {
 				handleError(err)
 			}
 
+			if jsonOutput {
+				outputJSON(info)
+				return
+			}
+
 			if info.IsSet {
 				fmt.Println("DWS password is set")
 			} else {
@@ -172,6 +177,11 @@ func addControlCommands() {
 			config, err := client.Control.GetLocalDWS()
 			if err != nil {
 				handleError(err)
+			}
+
+			if jsonOutput {
+				outputJSON(config)
+				return
 			}
 
 			if config.Enabled {

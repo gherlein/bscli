@@ -28,7 +28,17 @@ func addLogsCommands() {
 				handleError(err)
 			}
 
-			fmt.Println(logs)
+			if jsonOutput {
+				outputJSON(logs)
+			} else {
+				// Handle different possible log formats
+				switch logData := logs.(type) {
+				case string:
+					fmt.Println(logData)
+				default:
+					fmt.Printf("%v\n", logs)
+				}
+			}
 		},
 	}
 
@@ -52,7 +62,21 @@ func addLogsCommands() {
 				handleError(err)
 			}
 
-			fmt.Printf("Supervisor logging level: %s\n", level)
+			if jsonOutput {
+				outputJSON(level)
+			} else {
+				// Handle different possible level formats
+				switch levelData := level.(type) {
+				case string:
+					fmt.Printf("Supervisor logging level: %s\n", levelData)
+				case float64:
+					fmt.Printf("Supervisor logging level: %.0f\n", levelData)
+				case int:
+					fmt.Printf("Supervisor logging level: %d\n", levelData)
+				default:
+					fmt.Printf("Supervisor logging level: %v\n", level)
+				}
+			}
 		},
 	}
 

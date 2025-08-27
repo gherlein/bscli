@@ -13,40 +13,40 @@ type LogEntry struct {
 }
 
 // GetLogs retrieves player serial logs
-func (s *LogsService) GetLogs() (string, error) {
+func (s *LogsService) GetLogs() (interface{}, error) {
 	resp, err := s.client.doRequest("GET", "/logs/", nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	var result struct {
 		Data struct {
-			Result string `json:"result"`
+			Result interface{} `json:"result"`
 		} `json:"data"`
 	}
 
 	if err := parseJSON(resp, &result); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	return result.Data.Result, nil
 }
 
 // GetSupervisorLoggingLevel returns current logging level
-func (s *LogsService) GetSupervisorLoggingLevel() (string, error) {
+func (s *LogsService) GetSupervisorLoggingLevel() (interface{}, error) {
 	resp, err := s.client.doRequest("GET", "/system/supervisor/logging/", nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	var result struct {
 		Data struct {
-			Result string `json:"result"`
+			Result interface{} `json:"result"`
 		} `json:"data"`
 	}
 
 	if err := parseJSON(resp, &result); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	return result.Data.Result, nil

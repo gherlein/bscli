@@ -31,8 +31,12 @@ func addRegistryCommands() {
 				handleError(err)
 			}
 
-			data, _ := json.MarshalIndent(registry, "", "  ")
-			fmt.Println(string(data))
+			if jsonOutput {
+				outputJSON(registry)
+			} else {
+				data, _ := json.MarshalIndent(registry, "", "  ")
+				fmt.Println(string(data))
+			}
 		},
 	}
 
@@ -50,6 +54,16 @@ func addRegistryCommands() {
 			value, err := client.Registry.GetValue(args[0], args[1])
 			if err != nil {
 				handleError(err)
+			}
+
+			if jsonOutput {
+				result := map[string]interface{}{
+					"section": args[0],
+					"key":     args[1],
+					"value":   value,
+				}
+				outputJSON(result)
+				return
 			}
 
 			fmt.Printf("%s/%s = %s\n", args[0], args[1], value)
@@ -70,6 +84,17 @@ func addRegistryCommands() {
 			err = client.Registry.SetValue(args[0], args[1], args[2])
 			if err != nil {
 				handleError(err)
+			}
+
+			if jsonOutput {
+				result := map[string]interface{}{
+					"section": args[0],
+					"key":     args[1],
+					"value":   args[2],
+					"action":  "set",
+				}
+				outputJSON(result)
+				return
 			}
 
 			fmt.Printf("Set %s/%s = %s\n", args[0], args[1], args[2])
@@ -239,24 +264,35 @@ func addRegistryCommands() {
 			fmt.Printf("Search results for '%s':\n", args[0])
 			found := false
 
-			for section, keys := range registry {
-				sectionLower := strings.ToLower(section)
-				
-				for key, value := range keys {
-					keyLower := strings.ToLower(key)
-					valueLower := strings.ToLower(value)
+			// Handle different registry formats
+			switch regData := registry.(type) {
+			case map[string]interface{}:
+				for section, sectionData := range regData {
+					sectionLower := strings.ToLower(section)
+					
+					// Check if section data is another map
+					if keys, ok := sectionData.(map[string]interface{}); ok {
+						for key, valueInterface := range keys {
+							keyLower := strings.ToLower(key)
+							value := fmt.Sprintf("%v", valueInterface)
+							valueLower := strings.ToLower(value)
 
-					if (ignoreCase && (strings.Contains(sectionLower, searchTerm) ||
-						strings.Contains(keyLower, searchTerm) ||
-						strings.Contains(valueLower, searchTerm))) ||
-						(!ignoreCase && (strings.Contains(section, args[0]) ||
-						strings.Contains(key, args[0]) ||
-						strings.Contains(value, args[0]))) {
-						
-						fmt.Printf("  %s/%s = %s\n", section, key, value)
-						found = true
+							if (ignoreCase && (strings.Contains(sectionLower, searchTerm) ||
+								strings.Contains(keyLower, searchTerm) ||
+								strings.Contains(valueLower, searchTerm))) ||
+								(!ignoreCase && (strings.Contains(section, args[0]) ||
+								strings.Contains(key, args[0]) ||
+								strings.Contains(value, args[0]))) {
+								
+								fmt.Printf("  %s/%s = %s\n", section, key, value)
+								found = true
+							}
+						}
 					}
 				}
+			default:
+				fmt.Printf("Registry data format not supported for search: %T\n", registry)
+				return
 			}
 
 			if !found {

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 )
 
 // InfoService handles player information endpoints
@@ -46,15 +45,15 @@ type NetworkInterface struct {
 
 // HealthInfo represents player health status
 type HealthInfo struct {
-	Status     string    `json:"status"`
-	StatusTime time.Time `json:"statusTime"`
+	Status     string `json:"status"`
+	StatusTime string `json:"statusTime"` // Changed to string to handle various date formats
 }
 
 // TimeInfo represents time configuration
 type TimeInfo struct {
-	Date     string `json:"date"`
-	Time     string `json:"time"`
-	Timezone string `json:"timezone,omitempty"`
+	Date     interface{} `json:"date"` // Can be string or number
+	Time     string      `json:"time"`
+	Timezone string      `json:"timezone,omitempty"`
 }
 
 // VideoMode represents video output mode
@@ -173,7 +172,7 @@ func (s *InfoService) GetVideoMode() (*VideoMode, error) {
 }
 
 // ListAPIs returns list of all available APIs
-func (s *InfoService) ListAPIs() ([]string, error) {
+func (s *InfoService) ListAPIs() (interface{}, error) {
 	resp, err := s.client.doRequest("GET", "/", nil)
 	if err != nil {
 		return nil, err
@@ -181,7 +180,7 @@ func (s *InfoService) ListAPIs() ([]string, error) {
 
 	var result struct {
 		Data struct {
-			Result []string `json:"result"`
+			Result interface{} `json:"result"`
 		} `json:"data"`
 	}
 

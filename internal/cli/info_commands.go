@@ -88,7 +88,7 @@ func addInfoCommands() {
 				outputJSON(health)
 			} else {
 				fmt.Printf("Status: %s\n", health.Status)
-				fmt.Printf("Status Time: %s\n", health.StatusTime.Format("2006-01-02 15:04:05"))
+				fmt.Printf("Status Time: %s\n", health.StatusTime)
 			}
 		},
 	}
@@ -111,7 +111,7 @@ func addInfoCommands() {
 			if jsonOutput {
 				outputJSON(timeInfo)
 			} else {
-				fmt.Printf("Date: %s\n", timeInfo.Date)
+				fmt.Printf("Date: %v\n", timeInfo.Date)
 				fmt.Printf("Time: %s\n", timeInfo.Time)
 				if timeInfo.Timezone != "" {
 					fmt.Printf("Timezone: %s\n", timeInfo.Timezone)
@@ -199,8 +199,22 @@ func addInfoCommands() {
 				outputJSON(apis)
 			} else {
 				fmt.Println("Available APIs:")
-				for _, api := range apis {
-					fmt.Printf("  - %s\n", api)
+				// Handle different possible return types
+				switch apiList := apis.(type) {
+				case []string:
+					for _, api := range apiList {
+						fmt.Printf("  - %s\n", api)
+					}
+				case []interface{}:
+					for _, api := range apiList {
+						fmt.Printf("  - %v\n", api)
+					}
+				case map[string]interface{}:
+					for key, value := range apiList {
+						fmt.Printf("  - %s: %v\n", key, value)
+					}
+				default:
+					fmt.Printf("  %v\n", apis)
 				}
 			}
 		},
